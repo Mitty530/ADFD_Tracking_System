@@ -4,7 +4,13 @@ class PermissionService {
   // Check if user has permission for a specific action
   hasPermission(user: User | null, action: ActionType): boolean {
     if (!user) return action === 'view'; // Only viewing is allowed without login
-    
+
+    // Check if user role exists in ROLE_PERMISSIONS
+    if (!user.role || !ROLE_PERMISSIONS[user.role]) {
+      console.error('❌ Invalid user role:', user.role, 'Available roles:', Object.keys(ROLE_PERMISSIONS));
+      return false;
+    }
+
     return ROLE_PERMISSIONS[user.role].includes(action);
   }
 
@@ -25,9 +31,6 @@ class PermissionService {
 
     // Additional checks based on action and request state
     switch (action) {
-      case 'create_request':
-        // Archive team can always create requests
-        return { canPerform: true };
 
       case 'approve':
         if (request.currentStage !== 'technical_review') {
@@ -102,10 +105,7 @@ class PermissionService {
       }
     });
 
-    // Archive team can always create new requests (not tied to specific request)
-    if (user.role === 'archive_team') {
-      actions.push('create_request');
-    }
+    // Archive team permissions (no create_request action anymore)
 
     return actions;
   }
@@ -122,16 +122,17 @@ class PermissionService {
       archive_team: 'Archive Team',
       operations_team: 'Operations Team',
       core_banking_team: 'Core Banking Team',
-      loan_admin: 'Loan Administrator'
+      loan_admin: 'Loan Administrator',
+      admin: 'Administrator',
+      observer: 'Observer'
     };
-    
+
     return roleNames[role] || role;
   }
 
   // Get action display name
   getActionDisplayName(action: ActionType): string {
     const actionNames: Record<ActionType, string> = {
-      create_request: 'Create Request',
       approve: 'Approve Request',
       reject: 'Reject Request',
       disburse: 'Disburse Request',
@@ -218,6 +219,12 @@ class PermissionService {
         restrictions.push('Can only disburse requests in Core Banking stage');
         break;
       case 'loan_admin':
+        restrictions.push('Read-only access - cannot perform any actions');
+        break;
+      case 'admin':
+        restrictions.push('Full access - no restrictions');
+        break;
+      case 'observer':
         restrictions.push('Read-only access - cannot perform any actions');
         break;
     }

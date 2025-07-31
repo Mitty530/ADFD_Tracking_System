@@ -1,15 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  Bell,
   Eye,
-  Upload,
-  Download,
-  MessageCircle,
   Search,
-  Plus,
-  LogOut,
   Calendar,
   DollarSign,
   Clock,
@@ -17,108 +12,60 @@ import {
   AlertCircle,
   XCircle,
   Pause,
-  ArrowRight,
   TrendingUp,
   Activity,
   FileText,
   Users,
-  Lock,
-  Shield,
-  X
+  X,
+  Plus,
+  User as UserIcon
 } from 'lucide-react';
 import { withdrawalRequestService } from '../services/withdrawalRequestService';
 import { permissionService } from '../services/permissionService';
 import { notificationService } from '../services/notificationService';
+
 import NotificationContainer from './NotificationContainer';
 import ConfirmDialog from './ConfirmDialog';
 import RequestDetailsModal from './RequestDetailsModal';
+import PermissionDeniedNotification from './PermissionDeniedNotification';
+import ADFDLogo from './ADFDLogo';
+import ManualWithdrawalRequestForm from './ManualWithdrawalRequestForm';
+
+
 import {
   WithdrawalRequest,
   User,
   ActionType,
   DashboardStats,
-  LoadingState,
-  ModalState,
-  FilterOptions
+  LoadingState
 } from '../types/withdrawalTypes';
 
-// Enhanced mock users for ADFD Withdrawal Request Tracker with proper typing
-const mockUsers: Record<string, User> = {
-  'archive001': {
-    id: 'archive001',
-    name: 'Ahmed Al Zaabi',
-    email: 'aalzaabi@adfd.ae',
-    role: 'archive_team',
-    avatar: '👨‍💼',
-    permissions: ['create_request', 'view']
-  },
-  'admin001': {
-    id: 'admin001',
-    name: 'Mamadou Oury Diallo',
-    email: 'Mamadouourydiallo819@gmail.com',
-    role: 'loan_admin',
-    avatar: '👨‍💼',
-    permissions: ['view']
-  },
-  'ops001': {
-    id: 'ops001',
-    name: 'Ali Al Derie',
-    email: 'aalderei@adfd.ae',
-    role: 'operations_team',
-    avatar: '👨‍🔧',
-    permissions: ['approve', 'reject', 'view']
-  },
-  'bank001': {
-    id: 'bank001',
-    name: 'Ahmed Siddique',
-    email: 'asiddique@adfd.ae',
-    role: 'core_banking_team',
-    avatar: '👩‍💻',
-    permissions: ['disburse', 'view']
-  }
-};
+
+
+// Remove mock users - using real authentication now
 
 
 
 
 
-const mockDocuments = {
-  1001: [
-    { id: 1, filename: 'Withdrawal_Form_REF001.pdf', fileSize: '2.3 MB', uploadedAt: '2025-05-10T09:15:00Z', uploadedBy: 1 },
-    { id: 2, filename: 'Invoice_Alpha_001.pdf', fileSize: '1.8 MB', uploadedAt: '2025-05-10T09:16:00Z', uploadedBy: 1 }
-  ],
-  1002: [
-    { id: 4, filename: 'Withdrawal_Form_REF002.pdf', fileSize: '2.1 MB', uploadedAt: '2025-05-05T10:20:00Z', uploadedBy: 1 },
-    { id: 5, filename: 'Invoice_Beta_001.pdf', fileSize: '1.9 MB', uploadedAt: '2025-05-05T10:21:00Z', uploadedBy: 1 }
-  ]
-};
 
-const mockComments = {
-  1002: [
-    { id: 1, userId: 3, comment: 'Withdrawal date has expired. Requesting extension from legal team.', createdAt: '2025-05-08T14:30:00Z' },
-    { id: 2, userId: 2, comment: 'Extension request documentation sent to beneficiary.', createdAt: '2025-05-08T16:20:00Z' }
-  ],
-  1003: [
-    { id: 3, userId: 3, comment: 'Technical review in progress. Checking project eligibility requirements.', createdAt: '2025-05-12T10:15:00Z' }
-  ]
-};
+
+
 
 const WithdrawalRequestDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   // Enhanced state management with proper types
   const [requests, setRequests] = useState<WithdrawalRequest[]>([]);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<WithdrawalRequest | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRequestDetails, setShowRequestDetails] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
-  const [actionToPerform, setActionToPerform] = useState<{action: ActionType, request?: WithdrawalRequest} | null>(null);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterCountry, setFilterCountry] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [showCreateRequest, setShowCreateRequest] = useState(false);
-  const [newComment, setNewComment] = useState('');
+  const [showManualForm, setShowManualForm] = useState(false);
+
   const [animateStats, setAnimateStats] = useState(false);
   const [loadingState, setLoadingState] = useState<LoadingState>({ isLoading: false });
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -133,23 +80,35 @@ const WithdrawalRequestDashboard: React.FC = () => {
     message: '',
     onConfirm: async () => {}
   });
+  const [permissionDenied, setPermissionDenied] = useState({
+    isOpen: false,
+    userRole: '',
+    attemptedAction: '',
+    requiredRole: '',
+    message: ''
+  });
+
+  // Helper function to get first name
+  const getFirstName = (fullName: string) => {
+    return fullName.split(' ')[0];
+  };
 
   // Load data and initialize component
   useEffect(() => {
     loadRequests();
-    loadCurrentUser();
     setAnimateStats(true);
     setTimeout(() => setAnimateStats(false), 1000);
   }, []);
+
+
 
   // Handle keyboard shortcuts
   useEffect(() => {
     const handleEscKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         if (showModal) setShowModal(false);
-        if (showLoginModal) setShowLoginModal(false);
-        if (showCreateRequest) setShowCreateRequest(false);
         if (confirmDialog.isOpen) setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        if (permissionDenied.isOpen) setPermissionDenied(prev => ({ ...prev, isOpen: false }));
         if (showRequestDetails) {
           setShowRequestDetails(false);
           setSelectedRequestId(null);
@@ -159,7 +118,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
 
     document.addEventListener('keydown', handleEscKey);
     return () => document.removeEventListener('keydown', handleEscKey);
-  }, [showModal, showLoginModal, showCreateRequest, confirmDialog.isOpen, showRequestDetails]);
+  }, [showModal, confirmDialog.isOpen, permissionDenied.isOpen, showRequestDetails]);
 
   // Data loading functions
   const loadRequests = useCallback(() => {
@@ -172,10 +131,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
     }
   }, []);
 
-  const loadCurrentUser = useCallback(() => {
-    const savedUser = withdrawalRequestService.getCurrentUser();
-    setCurrentUser(savedUser);
-  }, []);
+
 
   // Handle request details view
   const handleViewRequestDetails = useCallback((request: WithdrawalRequest) => {
@@ -183,35 +139,75 @@ const WithdrawalRequestDashboard: React.FC = () => {
     setShowRequestDetails(true);
   }, []);
 
-  // Enhanced action handlers with proper functionality
-  const handleLoginForAction = useCallback(async (action: ActionType, request?: WithdrawalRequest) => {
-    // Check if user is already logged in and has permission
-    if (currentUser) {
-      const permissionCheck = permissionService.canPerformAction(currentUser, action, request);
-      if (permissionCheck.canPerform) {
-        await performAction(action, request);
-        return;
-      } else {
-        notificationService.permissionDenied(permissionCheck.reason || 'this action');
-        return;
-      }
+  // Handle manual form navigation
+  const handleShowManualForm = useCallback(() => {
+    setShowManualForm(true);
+  }, []);
+
+  const handleBackFromManualForm = useCallback(() => {
+    setShowManualForm(false);
+  }, []);
+
+  const handleManualFormSuccess = useCallback((requestId: string) => {
+    setShowManualForm(false);
+    loadRequests(); // Refresh the requests list
+    notificationService.success(
+      'Request Created Successfully!',
+      `Manual withdrawal request has been created with ID: ${requestId}`
+    );
+  }, [loadRequests]);
+
+  // Handle sign out
+  const handleSignOut = async () => {
+    try {
+      console.log('🔄 User signing out...');
+      await signOut();
+      navigate('/', { replace: true });
+      console.log('✅ Successfully signed out and redirected to landing page');
+    } catch (error) {
+      console.error('❌ Error signing out:', error);
     }
+  };
 
-    // Show login modal for action
-    setActionToPerform({ action, request });
-    setShowLoginModal(true);
-  }, [currentUser]);
-
-  const performAction = useCallback(async (action: ActionType, request?: WithdrawalRequest) => {
-    if (!currentUser) {
-      notificationService.error('Authentication Required', 'Please log in to perform this action');
+  // Enhanced action handlers with proper functionality
+  const handleActionRequest = useCallback(async (action: ActionType, request?: WithdrawalRequest) => {
+    // Check if user is authenticated
+    if (!user) {
+      console.error('❌ User not authenticated');
       return;
     }
 
-    // Validate permission
-    const permissionCheck = permissionService.canPerformAction(currentUser, action, request);
-    if (!permissionCheck.canPerform) {
-      notificationService.permissionDenied(permissionCheck.reason || 'this action');
+    // Map user role to withdrawal request role format
+    const mappedRole = mapUserRole(user.role);
+    const mockUser: User = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: mappedRole as any,
+      avatar: '👤',
+      permissions: []
+    };
+
+    // Check if user has permission for this action
+    const permissionCheck = permissionService.canPerformAction(mockUser, action, request);
+    if (permissionCheck.canPerform) {
+      await performAction(action, request);
+    } else {
+      // Show modern permission denied notification
+      const requiredRole = getRequiredRoleForAction(action);
+      setPermissionDenied({
+        isOpen: true,
+        userRole: user.role,
+        attemptedAction: getActionDisplayName(action),
+        requiredRole: requiredRole,
+        message: ''
+      });
+    }
+  }, [user]);
+
+  const performAction = useCallback(async (action: ActionType, request?: WithdrawalRequest) => {
+    if (!user) {
+      console.error('❌ User not authenticated');
       return;
     }
 
@@ -228,9 +224,6 @@ const WithdrawalRequestDashboard: React.FC = () => {
         case 'disburse':
           await handleDisburseRequest(request!);
           break;
-        case 'create_request':
-          setShowCreateRequest(true);
-          break;
         default:
           throw new Error(`Unknown action: ${action}`);
       }
@@ -240,7 +233,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
     } finally {
       setLoadingState({ isLoading: false });
     }
-  }, [currentUser]);
+  }, [user]);
 
   // Specific action handlers with confirmation dialogs
   const handleApproveRequest = useCallback(async (request: WithdrawalRequest) => {
@@ -259,7 +252,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
             });
 
             if (success) {
-              withdrawalRequestService.logAction(request.id, 'approve', currentUser!.id, 'Request approved by Operations Team');
+              withdrawalRequestService.logAction(request.id, 'approve', user!.id, 'Request approved by Operations Team');
               notificationService.requestApproved(request.refNumber);
               loadRequests();
               setConfirmDialog(prev => ({ ...prev, isOpen: false }));
@@ -275,7 +268,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
         }
       });
     });
-  }, [currentUser, loadRequests]);
+  }, [user, loadRequests]);
 
   const handleRejectRequest = useCallback(async (request: WithdrawalRequest) => {
     return new Promise<void>((resolve, reject) => {
@@ -293,7 +286,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
             });
 
             if (success) {
-              withdrawalRequestService.logAction(request.id, 'reject', currentUser!.id, 'Request rejected by Operations Team');
+              withdrawalRequestService.logAction(request.id, 'reject', user!.id, 'Request rejected by Operations Team');
               notificationService.requestRejected(request.refNumber);
               loadRequests();
               setConfirmDialog(prev => ({ ...prev, isOpen: false }));
@@ -309,7 +302,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
         }
       });
     });
-  }, [currentUser, loadRequests]);
+  }, [user, loadRequests]);
 
   const handleDisburseRequest = useCallback(async (request: WithdrawalRequest) => {
     return new Promise<void>((resolve, reject) => {
@@ -327,7 +320,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
             });
 
             if (success) {
-              withdrawalRequestService.logAction(request.id, 'disburse', currentUser!.id, 'Request disbursed by Core Banking Team');
+              withdrawalRequestService.logAction(request.id, 'disburse', user!.id, 'Request disbursed by Core Banking Team');
               notificationService.requestDisbursed(request.refNumber);
               loadRequests();
               setConfirmDialog(prev => ({ ...prev, isOpen: false }));
@@ -343,51 +336,11 @@ const WithdrawalRequestDashboard: React.FC = () => {
         }
       });
     });
-  }, [currentUser, loadRequests]);
+  }, [user, loadRequests]);
 
-  // Authentication handlers
-  const handleLogin = useCallback(async (username: string) => {
-    try {
-      const user = mockUsers[username];
-      if (!user) {
-        notificationService.loginError('Invalid user credentials');
-        return;
-      }
 
-      // Validate permission for pending action
-      if (actionToPerform) {
-        const permissionCheck = permissionService.canPerformAction(user, actionToPerform.action, actionToPerform.request);
-        if (!permissionCheck.canPerform) {
-          notificationService.permissionDenied(permissionCheck.reason || 'this action');
-          return;
-        }
-      }
 
-      // Set current user and save to storage
-      setCurrentUser(user);
-      withdrawalRequestService.setCurrentUser(user);
-      notificationService.loginSuccess(user.name);
 
-      // Close login modal
-      setShowLoginModal(false);
-
-      // Perform pending action if any
-      if (actionToPerform) {
-        await performAction(actionToPerform.action, actionToPerform.request);
-        setActionToPerform(null);
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      notificationService.loginError('An error occurred during login');
-    }
-  }, [actionToPerform, performAction]);
-
-  const handleLogout = useCallback(() => {
-    setCurrentUser(null);
-    withdrawalRequestService.clearCurrentUser();
-    setActionToPerform(null);
-    notificationService.info('Logged Out', 'You have been successfully logged out');
-  }, []);
 
   // Enhanced search and filtering
   const filteredRequests = React.useMemo(() => {
@@ -451,7 +404,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
   }, [requests]);
 
   useEffect(() => {
-    if (showModal || showLoginModal || showCreateRequest || confirmDialog.isOpen || showRequestDetails) {
+    if (showModal || confirmDialog.isOpen || permissionDenied.isOpen || showRequestDetails) {
       // Scroll to top when modal opens
       window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -473,23 +426,58 @@ const WithdrawalRequestDashboard: React.FC = () => {
       document.body.style.position = 'unset';
       document.body.style.width = 'unset';
     };
-  }, [showModal, showLoginModal, showCreateRequest, confirmDialog.isOpen, showRequestDetails]);
+  }, [showModal, confirmDialog.isOpen, permissionDenied.isOpen, showRequestDetails]);
 
   // Map ADFD user roles to withdrawal request roles
   const mapUserRole = (adfdRole: string) => {
     switch (adfdRole) {
       case 'archive_team':
-        return 'archive';
+        return 'archive_team';
+      case 'operations_team':
       case 'regional_operations':
       case 'head_of_operations':
-        return 'operations';
+        return 'operations_team';
       case 'core_banking':
-        return 'core_banking';
+        return 'core_banking_team';
+      case 'core_banking_team':
+        return 'core_banking_team';
       case 'admin':
+        return 'admin'; // Admin users have all permissions
+      case 'loan_admin':
       case 'loan_administrator':
         return 'loan_admin';
+      case 'observer':
+        return 'observer'; // Observer gets view-only access
       default:
+        console.warn('⚠️ Unknown role:', adfdRole, 'defaulting to loan_admin');
         return 'loan_admin'; // Default to view-only
+    }
+  };
+
+  // Get required role for specific actions
+  const getRequiredRoleForAction = (action: ActionType): string => {
+    switch (action) {
+      case 'approve':
+      case 'reject':
+        return 'Operations Team';
+      case 'disburse':
+        return 'Core Banking Team';
+      default:
+        return 'Administrator';
+    }
+  };
+
+  // Get user-friendly action names
+  const getActionDisplayName = (action: ActionType): string => {
+    switch (action) {
+      case 'approve':
+        return 'approve requests';
+      case 'reject':
+        return 'reject requests';
+      case 'disburse':
+        return 'disburse requests';
+      default:
+        return action.replace('_', ' ');
     }
   };
 
@@ -533,7 +521,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
       buttons.push(
         <motion.button
           key="approve"
-          onClick={() => handleLoginForAction('approve', request)}
+          onClick={() => handleActionRequest('approve', request)}
           className="text-white p-3 rounded-2xl shadow-lg"
           style={{ backgroundColor: '#4A8B2C' }}
           title="Approve (Operations Team Only)"
@@ -548,7 +536,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
       buttons.push(
         <motion.button
           key="reject"
-          onClick={() => handleLoginForAction('reject', request)}
+          onClick={() => handleActionRequest('reject', request)}
           className="text-white p-3 rounded-2xl shadow-lg"
           style={{ backgroundColor: '#DC3545' }}
           title="Reject (Operations Team Only)"
@@ -565,7 +553,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
       buttons.push(
         <motion.button
           key="disburse"
-          onClick={() => handleLoginForAction('disburse', request)}
+          onClick={() => handleActionRequest('disburse', request)}
           className="text-white p-3 rounded-2xl shadow-lg"
           style={{ backgroundColor: '#007CBA' }}
           title="Mark as Disbursed (Core Banking Team Only)"
@@ -583,10 +571,20 @@ const WithdrawalRequestDashboard: React.FC = () => {
 
   // Use the enhanced memoized versions
 
+  // Show manual form if requested
+  if (showManualForm) {
+    return (
+      <ManualWithdrawalRequestForm
+        onBack={handleBackFromManualForm}
+        onSuccess={handleManualFormSuccess}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white relative" style={{ backgroundColor: '#FFFFFF' }}>
       {/* Main Content Container */}
-      <div className={`relative transition-all duration-300 ${(showModal || showLoginModal || showCreateRequest || confirmDialog.isOpen || showRequestDetails) ? 'pointer-events-none opacity-30 blur-sm' : 'opacity-100'}`}>
+      <div className={`relative transition-all duration-300 ${(showModal || confirmDialog.isOpen || permissionDenied.isOpen || showRequestDetails) ? 'pointer-events-none opacity-30 blur-sm' : 'opacity-100'}`}>
         {/* ADFD Brand Animated Background Effects */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-br from-gray-50/30 via-white to-gray-50/30"></div>
@@ -598,21 +596,32 @@ const WithdrawalRequestDashboard: React.FC = () => {
       </div>
 
       {/* ADFD Premium Header */}
-      <header className="relative z-10 bg-white shadow-lg border-b" style={{ borderColor: '#DEE1E3' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <div className="flex items-center space-x-4">
+      <header className="relative z-10 bg-gradient-to-r from-blue-50 to-blue-100 shadow-xl border-b-2" style={{ borderColor: '#007CBA' }}>
+        {/* Header Background Pattern */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-0 right-0 w-96 h-full opacity-5">
+            <div className="w-full h-full bg-gradient-to-l from-blue-200 to-transparent"></div>
+          </div>
+          <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-blue-200 opacity-10 animate-pulse"></div>
+          <div className="absolute top-5 right-20 w-16 h-16 rounded-full bg-green-200 opacity-10 animate-pulse delay-300"></div>
+        </div>
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-24">
+            {/* Logo and Title Section */}
+            <div className="flex items-center space-x-5">
               <motion.div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg"
+                className="relative w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl"
                 style={{ background: 'linear-gradient(135deg, #007CBA, #004D71)' }}
                 whileHover={{ scale: 1.1, rotate: 5 }}
-                transition={{ duration: 0.3 }}
+                transition={{ duration: 0.3, type: "spring", stiffness: 300 }}
               >
-                <DollarSign className="w-6 h-6 text-white" />
+                <ADFDLogo size={28} className="text-white" />
+                <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl blur opacity-25 animate-pulse"></div>
               </motion.div>
-              <div>
+              <div className="space-y-1">
                 <motion.h1
-                  className="text-2xl font-bold"
+                  className="text-3xl font-bold tracking-tight"
                   style={{
                     background: 'linear-gradient(135deg, #007CBA, #004D71)',
                     WebkitBackgroundClip: 'text',
@@ -623,71 +632,125 @@ const WithdrawalRequestDashboard: React.FC = () => {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.6 }}
                 >
-                  ADFD Withdrawal Request Tracker
+                  ADFD Request Tracker
                 </motion.h1>
-                <p className="text-sm" style={{ color: '#5B6670' }}>Real-time tracking dashboard • Public viewing • Strict role-based actions</p>
+                <motion.p
+                  className="text-sm font-medium flex items-center space-x-2"
+                  style={{ color: '#5B6670' }}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.6, delay: 0.1 }}
+                >
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                  <span>Real-time tracking dashboard</span>
+                  <span>•</span>
+                  <span>Public viewing</span>
+                  <span>•</span>
+                  <span>Strict role-based actions</span>
+                </motion.p>
               </div>
             </div>
 
-            <div className="flex items-center space-x-6">
-              <motion.button
-                onClick={() => handleLoginForAction('create_request')}
-                className="text-white px-6 py-3 rounded-2xl flex items-center space-x-2 shadow-lg transform hover:scale-105 transition-all duration-200"
-                style={{ background: 'linear-gradient(135deg, #4A8B2C, #74A855)' }}
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Plus className="w-5 h-5" />
-                <span className="font-medium">New Request</span>
-                <span className="text-xs bg-white/20 px-2 py-1 rounded-lg">Archive Only</span>
-              </motion.button>
+            {/* Right Section - Actions and Profile */}
+            <div className="flex items-center space-x-4">
+              {/* Enhanced Create Request Button - Only for Archive Team */}
+              {user && (user.role === 'archive_team' || user.role === 'admin') && (
+                <motion.button
+                  onClick={handleShowManualForm}
+                  className="relative group flex items-center space-x-3 px-6 py-3 text-white font-semibold rounded-2xl shadow-xl overflow-hidden min-w-fit whitespace-nowrap"
+                  style={{ backgroundColor: '#4A8B2C' }}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {/* Button Background Effects */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-10 transform -skew-x-12 translate-x-full group-hover:translate-x-[-200%] transition-transform duration-700"></div>
 
-              {currentUser ? (
+                  {/* Button Content */}
+                  <div className="relative flex items-center space-x-2 z-10">
+                    <motion.div
+                      className="w-5 h-5 rounded-full bg-white bg-opacity-20 flex items-center justify-center"
+                      whileHover={{ rotate: 90 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Plus className="w-3 h-3" />
+                    </motion.div>
+                    <span className="text-sm font-semibold tracking-wide">Create New Request</span>
+                  </div>
+
+                  {/* Glow Effect */}
+                  <div className="absolute -inset-1 bg-gradient-to-r from-green-600 to-green-700 rounded-2xl blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
+                </motion.button>
+              )}
+
+              {/* Enhanced Profile Section with Dropdown */}
+              {user && (
                 <motion.div
-                  className="flex items-center space-x-3 rounded-2xl px-4 py-3 shadow-lg"
-                  style={{ backgroundColor: '#F9F9F9', border: '1px solid #DEE1E3' }}
+                  className="relative"
+                  data-profile-dropdown
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5 }}
-                  whileHover={{ scale: 1.02 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
                 >
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-lg text-white"
-                    style={{ background: 'linear-gradient(135deg, #007CBA, #004D71)' }}
-                  >
-                    {currentUser.avatar}
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold" style={{ color: '#323E48' }}>{currentUser.name}</div>
-                    <div className="text-xs capitalize" style={{ color: '#5B6670' }}>
-                      {currentUser.role.replace('_', ' ')}
-                      {currentUser.role === 'loan_admin' && <span style={{ color: '#007CBA' }} className="ml-1">(View Only)</span>}
-                    </div>
-                  </div>
+                  {/* Profile Button */}
                   <motion.button
-                    onClick={handleLogout}
-                    className="p-2 text-gray-500 hover:text-gray-700 hover:bg-white/50 rounded-xl transition-all duration-200"
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                    whileTap={{ scale: 0.9 }}
+                    onClick={() => navigate('/profile')}
+                    className="flex items-center space-x-3 bg-white rounded-2xl px-4 py-3 shadow-xl border-2 border-blue-100 hover:border-blue-200 transition-all duration-300 group"
+                    whileHover={{ scale: 1.02, y: -1 }}
+                    style={{ backdropFilter: 'blur(10px)' }}
                   >
-                    <LogOut className="w-4 h-4" />
+                    {/* Enhanced User Avatar */}
+                    <div className="relative">
+                      <motion.div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg"
+                        style={{ background: 'linear-gradient(135deg, #007CBA, #004D71)' }}
+                        whileHover={{ rotate: 5 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        {user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                      </motion.div>
+                      {/* Online Status Indicator */}
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white shadow-sm">
+                        <div className="w-full h-full bg-green-400 rounded-full animate-ping opacity-75"></div>
+                      </div>
+                    </div>
+
+                    {/* User Info - Show only first name */}
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="flex items-center space-x-2">
+                        <h3 className="text-sm font-bold text-gray-900 truncate">
+                          {getFirstName(user.name)}
+                        </h3>
+                        {user.role === 'admin' && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            Admin
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-600 capitalize truncate">
+                        {user.role.replace('_', ' ')}
+                      </p>
+                    </div>
+
+                    {/* Profile Icon */}
+                    <UserIcon className="w-4 h-4 text-gray-500" />
                   </motion.button>
+
+
+
+                  {/* Subtle Glow Effect */}
+                  <div className="absolute -inset-1 bg-gradient-to-r from-blue-200 to-blue-300 rounded-2xl blur opacity-20 group-hover:opacity-30 transition-opacity duration-300"></div>
                 </motion.div>
-              ) : (
-                <motion.button
-                  onClick={() => setShowLoginModal(true)}
-                  className="text-white px-6 py-3 rounded-2xl flex items-center space-x-2 shadow-lg transform hover:scale-105 transition-all duration-200"
-                  style={{ background: 'linear-gradient(135deg, #007CBA, #004D71)' }}
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Shield className="w-5 h-5" />
-                  <span className="font-medium">Login for Actions</span>
-                </motion.button>
               )}
             </div>
           </div>
         </div>
+
+        {/* Bottom Border Accent */}
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-green-500 to-blue-500"></div>
       </header>
 
       {/* Main Dashboard Content */}
@@ -1012,142 +1075,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
       </main>
       </div>
 
-      {/* Premium Login Modal */}
-      {showLoginModal && (
-        <motion.div
-          className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-start justify-center p-4 pt-8"
-          style={{ zIndex: 9999, top: 0, left: 0 }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowLoginModal(false);
-            }
-          }}
-        >
-          <motion.div
-            className="bg-white rounded-3xl shadow-2xl max-w-md w-full border border-gray-200"
-            style={{ zIndex: 10000 }}
-            initial={{ scale: 0.8, opacity: 0, y: 0 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.8, opacity: 0, y: 0 }}
-            transition={{ duration: 0.3 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-t-3xl">
-              <div className="flex justify-between items-center">
-                <div>
-                  <motion.h2
-                    className="text-xl font-bold"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 }}
-                  >
-                    🔒 Role Authentication
-                  </motion.h2>
-                  <motion.p
-                    className="text-blue-100 text-sm"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.2 }}
-                  >
-                    {actionToPerform && `Required Role: ${permissionService.getActionDisplayName(actionToPerform.action)}`}
-                  </motion.p>
-                </div>
-                <motion.button
-                  onClick={() => setShowLoginModal(false)}
-                  className="text-white hover:text-white bg-red-600 hover:bg-red-700 p-3 rounded-full transition-all duration-200 shadow-xl border-2 border-red-500"
-                  whileHover={{ scale: 1.1, rotate: 90 }}
-                  whileTap={{ scale: 0.9 }}
-                  style={{ backgroundColor: '#DC2626', borderColor: '#EF4444' }}
-                >
-                  <X className="w-5 h-5 font-bold" />
-                </motion.button>
-              </div>
-            </div>
 
-            <div className="p-6">
-              <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6">
-                <h3 className="font-bold text-red-800 mb-2">⚠️ Strict Access Control Rules</h3>
-                <div className="text-sm text-red-700 space-y-1">
-                  <div>🏛️ <strong>Archive Team:</strong> Can ONLY create new requests</div>
-                  <div>👀 <strong>Loan Administrator:</strong> View-only access (no actions)</div>
-                  <div>⚖️ <strong>Operations Team:</strong> Can ONLY approve/reject requests</div>
-                  <div>🏦 <strong>Core Banking:</strong> Can ONLY mark disbursements</div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {Object.entries(mockUsers).map(([username, mockUser], index) => {
-                  const canPerformCurrentAction = actionToPerform ? permissionService.canPerformAction(mockUser, actionToPerform.action, actionToPerform.request).canPerform : true;
-
-                  return (
-                    <motion.button
-                      key={username}
-                      onClick={() => handleLogin(username)}
-                      disabled={!canPerformCurrentAction}
-                      className={`w-full p-4 text-left rounded-2xl border transition-all duration-300 group ${
-                        canPerformCurrentAction
-                          ? 'backdrop-blur-md bg-white/80 hover:bg-white/90 border-white/20 hover:shadow-lg'
-                          : 'bg-gray-100/50 border-gray-200/50 opacity-50 cursor-not-allowed'
-                      }`}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 * index, duration: 0.3 }}
-                      whileHover={canPerformCurrentAction ? { scale: 1.02, x: 5 } : {}}
-                      whileTap={canPerformCurrentAction ? { scale: 0.98 } : {}}
-                    >
-                      <div className="flex items-center space-x-4">
-                        <motion.div
-                          className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl ${
-                            canPerformCurrentAction
-                              ? 'bg-gradient-to-r from-blue-400 to-purple-500'
-                              : 'bg-gray-300'
-                          }`}
-                          whileHover={canPerformCurrentAction ? { scale: 1.1, rotate: 5 } : {}}
-                          transition={{ duration: 0.2 }}
-                        >
-                          {mockUser.avatar}
-                        </motion.div>
-                        <div className="flex-1">
-                          <div className={`font-semibold ${canPerformCurrentAction ? 'text-gray-900' : 'text-gray-500'}`}>
-                            {mockUser.name}
-                          </div>
-                          <div className={`text-sm capitalize ${canPerformCurrentAction ? 'text-gray-600' : 'text-gray-400'}`}>
-                            {mockUser.role.replace('_', ' ')}
-                            {mockUser.role === 'loan_admin' && ' (View Only)'}
-                          </div>
-                          {!canPerformCurrentAction && (
-                            <motion.div
-                              className="text-xs text-red-600 font-medium mt-1"
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              transition={{ delay: 0.2 }}
-                            >
-                              ❌ Cannot perform this action
-                            </motion.div>
-                          )}
-                        </div>
-                        {canPerformCurrentAction ? (
-                          <motion.div
-                            whileHover={{ x: 5 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-all" />
-                          </motion.div>
-                        ) : (
-                          <Lock className="w-5 h-5 text-gray-400" />
-                        )}
-                      </div>
-                    </motion.button>
-                  );
-                })}
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
 
       {/* Premium Request Details Modal */}
       {showModal && selectedRequest && (
@@ -1297,7 +1225,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
                         <strong>Current Status:</strong> {selectedRequest.status}
                       </div>
                       <div className="text-sm text-gray-600">
-                        <strong>Assigned To:</strong> {mockUsers[Object.keys(mockUsers).find(k => mockUsers[k as keyof typeof mockUsers].id === selectedRequest.assignedTo) as keyof typeof mockUsers]?.name || 'Unassigned'}
+                        <strong>Assigned To:</strong> {selectedRequest.assignedTo || 'Unassigned'}
                       </div>
                     </motion.div>
                   </div>
@@ -1330,6 +1258,20 @@ const WithdrawalRequestDashboard: React.FC = () => {
           setSelectedRequestId(null);
         }}
       />
+
+      {/* Permission Denied Notification */}
+      <PermissionDeniedNotification
+        isOpen={permissionDenied.isOpen}
+        onClose={() => setPermissionDenied(prev => ({ ...prev, isOpen: false }))}
+        userRole={permissionDenied.userRole}
+        attemptedAction={permissionDenied.attemptedAction}
+        requiredRole={permissionDenied.requiredRole}
+        message={permissionDenied.message}
+      />
+
+
+
+
     </div>
   );
 };

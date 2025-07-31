@@ -1,6 +1,6 @@
 import React, { useEffect, Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { usePerformance } from './hooks/usePerformance';
 import { initializePerformanceOptimizations } from './utils/performanceOptimizations';
 
@@ -8,8 +8,10 @@ import { initializePerformanceOptimizations } from './utils/performanceOptimizat
 const NewLandingPage = lazy(() => import('./components/NewLandingPage'));
 const Login = lazy(() => import('./components/Login'));
 const Dashboard = lazy(() => import('./components/Dashboard'));
+const UserProfile = lazy(() => import('./components/UserProfile'));
 const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'));
-const MainLayout = lazy(() => import('./components/layout/MainLayout'));
+
+
 
 // Loading component
 const LoadingSpinner: React.FC = () => (
@@ -64,6 +66,23 @@ function PasswordResetRedirect() {
   );
 }
 
+// Component to handle landing page - always show landing page first
+function LandingPageRoute() {
+  const { loading } = useAuth();
+
+  // Show loading while checking auth status
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  // Always show landing page - let user choose to go to login or dashboard
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <NewLandingPage />
+    </Suspense>
+  );
+}
+
 function App() {
   useEffect(() => {
     // Initialize performance optimizations on app start
@@ -76,12 +95,34 @@ function App() {
         <div className="App">
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
-              {/* Clean dashboard without sidebar/footer */}
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              {/* Keep login route for when needed */}
+              {/* Landing page */}
+              <Route path="/" element={<LandingPageRoute />} />
+
+              {/* Authentication routes */}
               <Route path="/login" element={<Login />} />
-              {/* Future routes will be added here with MainLayout wrapper */}
+
+              {/* Protected dashboard route */}
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Protected profile route */}
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <UserProfile />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Redirect any unknown routes to landing */}
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
         </div>

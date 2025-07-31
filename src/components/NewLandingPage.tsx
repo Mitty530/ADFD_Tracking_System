@@ -6,16 +6,19 @@ import {
   Zap,
   Shield,
   Clock,
-  Users
+  Users,
+  ArrowRight
 } from 'lucide-react';
 import OptimizedLogo from './OptimizedLogo';
 import { usePerformance, preloadResource } from '../hooks/usePerformance';
+import { useAuth } from '../contexts/AuthContext';
 import '../styles/LandingPage.css';
 
 const NewLandingPage: React.FC = memo(() => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const { logPerformanceMetrics } = usePerformance();
+  const { user } = useAuth();
 
   const scrollToTop = () => {
     window.scrollTo({
@@ -154,7 +157,14 @@ const NewLandingPage: React.FC = memo(() => {
             </ul>
 
             <div className="nav-actions-new">
-              <Link to="/login" className="btn-nav-new primary">Get Started</Link>
+              {user ? (
+                <Link to="/dashboard" className="btn-nav-new primary">
+                  <ArrowRight size={16} />
+                  Go to Dashboard
+                </Link>
+              ) : (
+                <Link to="/login" className="btn-nav-new primary">Get Started</Link>
+              )}
             </div>
           </div>
         </div>
@@ -168,9 +178,24 @@ const NewLandingPage: React.FC = memo(() => {
             <h1 className="hero-title-new">
               Transform Fund Disbursement with Intelligent Automation
             </h1>
-            
+
+            {user && (
+              <div style={{
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                padding: '12px 24px',
+                borderRadius: '12px',
+                marginBottom: '24px',
+                color: 'white',
+                fontWeight: '600',
+                textAlign: 'center',
+                boxShadow: '0 4px 20px rgba(16, 185, 129, 0.3)'
+              }}>
+                Welcome back, {user.name}! You're successfully logged in.
+              </div>
+            )}
+
             <p className="hero-subtitle-new">
-              Enterprise-grade withdrawal request platform powered by AI-driven OCR, regional intelligence, and bank-level security.
+              Enterprise-grade withdrawal request platform powered by intelligent form processing, regional intelligence, and bank-level security.
             </p>
             
             <div className="hero-stats-new">
@@ -214,9 +239,9 @@ const NewLandingPage: React.FC = memo(() => {
               <div className="feature-icon-new" style={{ background: 'var(--gradient-primary)' }}>
                 <ScanText size={40} />
               </div>
-              <h3 className="feature-title-new">AI-Powered OCR Intelligence</h3>
+              <h3 className="feature-title-new">Intelligent Form Processing</h3>
               <p className="feature-description-new">
-                Advanced neural networks trained on Arabic and English financial documents achieve 99.9% extraction accuracy. Automatically reads, validates, and processes withdrawal requests in milliseconds.
+                Advanced form validation and processing system ensures accurate data entry and validation. Streamlined workflow processes withdrawal requests efficiently with comprehensive validation.
               </p>
             </div>
 
@@ -322,10 +347,17 @@ const NewLandingPage: React.FC = memo(() => {
               Join leading financial institutions worldwide who trust our platform for secure, efficient, and intelligent fund disbursement operations.
             </p>
             <div style={{ display: 'flex', gap: 'var(--space-6)', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Link to="/login" className="btn-hero-new primary">
-                <Rocket size={24} />
-                Get Started
-              </Link>
+              {user ? (
+                <Link to="/dashboard" className="btn-hero-new primary">
+                  <ArrowRight size={24} />
+                  Go to Dashboard
+                </Link>
+              ) : (
+                <Link to="/login" className="btn-hero-new primary">
+                  <Rocket size={24} />
+                  Get Started
+                </Link>
+              )}
             </div>
           </div>
         </div>

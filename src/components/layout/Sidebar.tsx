@@ -18,7 +18,8 @@ import {
   Plus,
   Clock,
   AlertTriangle,
-  TrendingUp
+  TrendingUp,
+  User
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -145,6 +146,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, isCollapsed, onToggle, onColl
       icon: Archive,
       path: '/archive',
       roles: ['admin', 'archive_team', 'loan_administrator']
+    },
+    {
+      id: 'profile',
+      label: 'Profile',
+      icon: User,
+      path: '/profile',
+      roles: ['admin', 'archive_team', 'loan_administrator', 'head_of_operations', 'operations_team', 'core_banking', 'observer']
     },
     {
       id: 'security',

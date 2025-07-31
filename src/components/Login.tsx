@@ -12,7 +12,6 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [mounted, setMounted] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
   const { user, loading, signInWithMagicLink } = useAuth();
   const { logPerformanceMetrics } = usePerformance();
@@ -71,17 +70,11 @@ const Login: React.FC = () => {
 
 
 
-    // Load saved email if Remember Me was previously enabled
-    const savedEmail = localStorage.getItem('adfd-saved-email');
-    const rememberMeEnabled = localStorage.getItem('adfd-remember-me') === 'true';
-
-    if (rememberMeEnabled && savedEmail) {
-      setEmail(savedEmail);
-      setRememberMe(true);
-    }
+    // Always start with empty email - users must enter their email each time
+    setEmail('');
   }, [logPerformanceMetrics]);
 
-  // Handle auto-redirect for logged-in users
+  // Handle auto-redirect for logged-in users and magic link errors
   useEffect(() => {
     if (user && !loading) {
       console.log('🔄 User is authenticated, redirecting to dashboard...');
@@ -89,6 +82,18 @@ const Login: React.FC = () => {
       setTimeout(() => {
         navigate('/dashboard', { replace: true });
       }, 1500); // Slightly longer delay to show the welcome message
+    } else if (!loading && !user) {
+      // Check if this might be a failed magic link authentication
+      const urlParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+
+      if (urlParams.get('error') || hashParams.get('error')) {
+        const errorMsg = urlParams.get('error_description') || hashParams.get('error_description') || 'Authentication failed';
+        setError(`🚫 Authentication failed: ${errorMsg}. Please try logging in again.`);
+
+        // Clean up the URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
     }
   }, [user, loading, navigate]);
 
@@ -109,16 +114,9 @@ const Login: React.FC = () => {
         return;
       }
 
-      // Validate email domain first
-      if (!validateEmailDomain(email)) {
-        setError('You are not authorized to access this system. Contact admin for assistance.');
-        setIsLoading(false);
-        return;
-      }
-
-      // Check if user is in authorized list
+      // Check if user is in authorized list (this also validates domain)
       if (!isAuthorizedUser(email)) {
-        setError('You are not authorized to access this system. Contact admin for assistance.');
+        setError('🚫 You are not authorized to access this system. Only ADFD team members with @adfd.ae email addresses (and authorized exceptions) can access the system. Contact admin for assistance.');
         setIsLoading(false);
         return;
       }
@@ -130,20 +128,15 @@ const Login: React.FC = () => {
 
       if (magicLinkError) {
         console.error('❌ Magic link error:', magicLinkError);
-        setError(magicLinkError.message || 'Failed to send login link. Please try again or contact the administrator.');
+        setError(magicLinkError || 'Failed to send login link. Please try again or contact the administrator.');
         return;
       }
 
       console.log('✅ Magic link sent successfully');
 
-      // Save Remember Me preference
-      if (rememberMe) {
-        localStorage.setItem('adfd-remember-me', 'true');
-        localStorage.setItem('adfd-saved-email', email);
-      } else {
-        localStorage.removeItem('adfd-remember-me');
-        localStorage.removeItem('adfd-saved-email');
-      }
+      // Clear any previously saved email data
+      localStorage.removeItem('adfd-remember-me');
+      localStorage.removeItem('adfd-saved-email');
 
       setSuccess('🎉 Login link sent! Check your email and click the link to sign in.');
 
@@ -613,19 +606,7 @@ const Login: React.FC = () => {
               />
             </div>
 
-            {/* Remember Me Checkbox - Fixed positioning */}
-            <div className="flex items-center space-x-3 py-3">
-              <input
-                id="remember-me"
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="h-5 w-5 text-green-600 focus:ring-green-500 border-gray-300 rounded transition-colors cursor-pointer"
-              />
-              <label htmlFor="remember-me" className="text-sm text-gray-700 font-medium cursor-pointer select-none">
-                Remember me on this device
-              </label>
-            </div>
+
 
             {/* Submit Button - Enhanced */}
             <button

@@ -1,8 +1,8 @@
 // User roles in the ADFD system
-export type UserRole = 'archive_team' | 'operations_team' | 'core_banking_team' | 'loan_admin';
+export type UserRole = 'archive_team' | 'operations_team' | 'core_banking_team' | 'loan_admin' | 'admin' | 'observer';
 
 // Action types for withdrawal requests
-export type ActionType = 'create_request' | 'approve' | 'reject' | 'disburse' | 'view';
+export type ActionType = 'approve' | 'reject' | 'disburse' | 'view';
 
 // Request stages
 export type RequestStage = 'initial_review' | 'technical_review' | 'core_banking' | 'disbursed';
@@ -19,9 +19,17 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
-  avatar: string;
+  avatar?: string;
   department?: string;
-  permissions: ActionType[];
+  permissions?: ActionType[];
+  region?: string;
+  regional_countries?: string[];
+  can_create_requests?: boolean;
+  can_approve_reject?: boolean;
+  can_disburse?: boolean;
+  view_only_access?: boolean;
+  is_active?: boolean;
+  avatar_url?: string;
 }
 
 // Withdrawal request interface
@@ -45,17 +53,55 @@ export interface WithdrawalRequest {
   attachments?: string[];
 }
 
-// Form data for creating new requests
+// Enhanced form data for creating new requests
 export interface CreateRequestFormData {
+  // Header Information
+  withdrawalRequestNo: string;
+  requestDate: string;
+
+  // Project Information
   projectNumber: string;
-  beneficiaryName: string;
-  country: string;
-  amount: number;
+  projectDescription: string;
+  additionalProjectDetails?: string;
+
+  // Agreement Details
+  agreementReference: string;
+  agreementDate: string;
+  agreementParty: string;
+
+  // Financial Information
+  paymentAmount: number;
   currency: Currency;
   valueDate: string;
+
+  // Beneficiary Information
+  beneficiaryName: string;
+  beneficiaryAddress: string;
+  beneficiaryBankName: string;
+  beneficiaryBankAddress: string;
+  beneficiaryBankAccount: string;
+  beneficiaryBankIBAN: string;
+  beneficiaryBankSwiftCode: string;
+
+  // Correspondence Bank Information
+  correspondenceBankName?: string;
+  correspondenceBankSwiftCode?: string;
+  correspondenceBankAddress?: string;
+
+  // Authorization
+  authorizedRepresentative1: string;
+  authorizedRepresentative2?: string;
+
+  // Additional Information
+  additionalNotes?: string;
+
+  // System fields
+  country: string;
   priority: Priority;
   notes?: string;
 }
+
+
 
 // Filter options
 export interface FilterOptions {
@@ -174,10 +220,12 @@ export interface ConfirmDialogProps {
 
 // Role-based permissions mapping
 export const ROLE_PERMISSIONS: Record<UserRole, ActionType[]> = {
-  archive_team: ['create_request', 'view'],
+  archive_team: ['view'],
   operations_team: ['approve', 'reject', 'view'],
   core_banking_team: ['disburse', 'view'],
-  loan_admin: ['view']
+  loan_admin: ['view'],
+  admin: ['approve', 'reject', 'disburse', 'view'], // Admin has all permissions
+  observer: ['view'] // Observer has view-only access
 };
 
 // Stage transition rules
@@ -275,13 +323,50 @@ export interface RequestDetailsModalState {
   isLoading: boolean;
 }
 
-// Default form values
+// Default form values for enhanced form
 export const DEFAULT_FORM_VALUES: CreateRequestFormData = {
+  // Header Information
+  withdrawalRequestNo: '',
+  requestDate: '',
+
+  // Project Information
   projectNumber: '',
-  beneficiaryName: '',
-  country: 'UAE',
-  amount: 0,
+  projectDescription: '',
+  additionalProjectDetails: '',
+
+  // Agreement Details
+  agreementReference: '',
+  agreementDate: '',
+  agreementParty: '',
+
+  // Financial Information
+  paymentAmount: 0,
   currency: 'USD',
   valueDate: '',
-  priority: 'medium'
+
+  // Beneficiary Information
+  beneficiaryName: '',
+  beneficiaryAddress: '',
+  beneficiaryBankName: '',
+  beneficiaryBankAddress: '',
+  beneficiaryBankAccount: '',
+  beneficiaryBankIBAN: '',
+  beneficiaryBankSwiftCode: '',
+
+  // Correspondence Bank Information
+  correspondenceBankName: '',
+  correspondenceBankSwiftCode: '',
+  correspondenceBankAddress: '',
+
+  // Authorization
+  authorizedRepresentative1: '',
+  authorizedRepresentative2: '',
+
+  // Additional Information
+  additionalNotes: '',
+
+  // System fields
+  country: 'UAE',
+  priority: 'medium',
+  notes: ''
 };

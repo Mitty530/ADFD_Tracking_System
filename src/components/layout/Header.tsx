@@ -79,7 +79,7 @@ const Header: React.FC<HeaderProps> = ({ onSidebarToggle, sidebarOpen }) => {
       localStorage.removeItem('adfd-saved-email');
       
       await signOut();
-      navigate('/login', { replace: true });
+      navigate('/', { replace: true });
     } catch (error) {
       console.error('Error signing out:', error);
       AuditTrailService.logError('logout_error', 'Failed to sign out from header', error instanceof Error ? error.stack : undefined);

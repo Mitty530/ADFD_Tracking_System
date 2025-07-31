@@ -140,11 +140,16 @@ class NotificationService {
     );
   }
 
-  permissionDenied(action: string): string {
-    return this.error(
-      'Permission Denied',
-      `You do not have permission to ${action}. Please contact your administrator.`
-    );
+  permissionDenied(action: string, userRole?: string, requiredRole?: string): string {
+    const title = '🚫 Access Denied';
+    const message = userRole && requiredRole
+      ? `Your role (${userRole.replace('_', ' ')}) cannot ${action}. Only ${requiredRole.replace('_', ' ')} members can perform this action.`
+      : `You do not have permission to ${action}. Please contact your administrator.`;
+
+    return this.error(title, message, {
+      duration: 8000, // Longer duration for permission errors
+      autoClose: false // Require manual dismissal
+    });
   }
 
   validationError(errors: string[]): string {

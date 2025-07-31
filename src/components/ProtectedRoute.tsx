@@ -34,7 +34,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // Check role-based access if required
-  if (requiredRole && user.role !== requiredRole) {
+  if (requiredRole && user && user.role !== requiredRole) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center max-w-md mx-auto p-6">
@@ -59,7 +59,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // Check permission-based access if required
-  if (requiredPermission) {
+  if (requiredPermission && user) {
     const hasPermission = checkUserPermission(user, requiredPermission);
     if (!hasPermission) {
       return (

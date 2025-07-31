@@ -56,12 +56,53 @@ CREATE TABLE IF NOT EXISTS public.withdrawal_requests (
     completed_at TIMESTAMP WITH TIME ZONE
 );
 
+-- Documents Table for file storage
+CREATE TABLE IF NOT EXISTS public.documents (
+    id BIGSERIAL PRIMARY KEY,
+    request_id BIGINT REFERENCES withdrawal_requests(id),
+    filename TEXT NOT NULL,
+    original_filename TEXT NOT NULL,
+    file_size BIGINT NOT NULL,
+    mime_type TEXT NOT NULL,
+    file_path TEXT NOT NULL, -- Supabase Storage path
+    storage_bucket TEXT DEFAULT 'withdrawal-documents',
+    uploaded_by UUID NOT NULL REFERENCES auth.users(id),
+    document_type TEXT DEFAULT 'withdrawal_request' CHECK (document_type IN ('withdrawal_request', 'supporting_document', 'invoice', 'receipt', 'other')),
+    is_primary BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+
+
+-- Enhanced Withdrawal Requests Table
+ALTER TABLE public.withdrawal_requests ADD COLUMN IF NOT EXISTS withdrawal_request_no TEXT;
+ALTER TABLE public.withdrawal_requests ADD COLUMN IF NOT EXISTS request_date DATE;
+ALTER TABLE public.withdrawal_requests ADD COLUMN IF NOT EXISTS project_description TEXT;
+ALTER TABLE public.withdrawal_requests ADD COLUMN IF NOT EXISTS additional_project_details TEXT;
+ALTER TABLE public.withdrawal_requests ADD COLUMN IF NOT EXISTS agreement_reference TEXT;
+ALTER TABLE public.withdrawal_requests ADD COLUMN IF NOT EXISTS agreement_party TEXT;
+ALTER TABLE public.withdrawal_requests ADD COLUMN IF NOT EXISTS payment_amount DECIMAL(15,2);
+ALTER TABLE public.withdrawal_requests ADD COLUMN IF NOT EXISTS beneficiary_address TEXT;
+ALTER TABLE public.withdrawal_requests ADD COLUMN IF NOT EXISTS beneficiary_bank_name TEXT;
+ALTER TABLE public.withdrawal_requests ADD COLUMN IF NOT EXISTS beneficiary_bank_address TEXT;
+ALTER TABLE public.withdrawal_requests ADD COLUMN IF NOT EXISTS beneficiary_bank_account TEXT;
+ALTER TABLE public.withdrawal_requests ADD COLUMN IF NOT EXISTS beneficiary_bank_iban TEXT;
+ALTER TABLE public.withdrawal_requests ADD COLUMN IF NOT EXISTS beneficiary_bank_swift_code TEXT;
+ALTER TABLE public.withdrawal_requests ADD COLUMN IF NOT EXISTS correspondence_bank_name TEXT;
+ALTER TABLE public.withdrawal_requests ADD COLUMN IF NOT EXISTS correspondence_bank_swift_code TEXT;
+ALTER TABLE public.withdrawal_requests ADD COLUMN IF NOT EXISTS correspondence_bank_address TEXT;
+ALTER TABLE public.withdrawal_requests ADD COLUMN IF NOT EXISTS authorized_representative_1 TEXT;
+ALTER TABLE public.withdrawal_requests ADD COLUMN IF NOT EXISTS authorized_representative_2 TEXT;
+ALTER TABLE public.withdrawal_requests ADD COLUMN IF NOT EXISTS additional_notes TEXT;
+
+
 -- Audit Logs Table
 CREATE TABLE IF NOT EXISTS public.audit_logs (
     id BIGSERIAL PRIMARY KEY,
     request_id BIGINT REFERENCES withdrawal_requests(id),
     user_id UUID NOT NULL REFERENCES auth.users(id),
-    action_type TEXT NOT NULL CHECK (action_type IN ('create', 'approve', 'reject', 'disburse', 'comment', 'assign', 'login', 'logout', 'view', 'navigate', 'update')),
+    action_type TEXT NOT NULL CHECK (action_type IN ('create', 'approve', 'reject', 'disburse', 'comment', 'assign', 'login', 'logout', 'view', 'navigate', 'update', 'document_upload')),
     action_details TEXT NOT NULL,
     previous_stage TEXT,
     new_stage TEXT,
@@ -145,6 +186,16 @@ CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_created_by ON public.withdraw
 CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_region ON public.withdrawal_requests(region);
 CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_priority ON public.withdrawal_requests(priority);
 CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_created_at ON public.withdrawal_requests(created_at);
+CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_project_number ON public.withdrawal_requests(project_number);
+CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_withdrawal_request_no ON public.withdrawal_requests(withdrawal_request_no);
+
+-- Document indexes
+CREATE INDEX IF NOT EXISTS idx_documents_request_id ON public.documents(request_id);
+CREATE INDEX IF NOT EXISTS idx_documents_uploaded_by ON public.documents(uploaded_by);
+CREATE INDEX IF NOT EXISTS idx_documents_document_type ON public.documents(document_type);
+CREATE INDEX IF NOT EXISTS idx_documents_created_at ON public.documents(created_at);
+
+
 
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON public.audit_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_request_id ON public.audit_logs(request_id);
@@ -187,6 +238,8 @@ ALTER TABLE public.user_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.request_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.request_documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
+
 
 -- User Profiles RLS Policies
 CREATE POLICY "Users can view their own profile" ON public.user_profiles FOR SELECT USING (auth.uid() = id);
@@ -255,3 +308,30 @@ CREATE POLICY "Users can view documents on accessible requests" ON public.reques
 -- Notifications RLS Policies
 CREATE POLICY "Users can view their own notifications" ON public.notifications FOR SELECT USING (user_id = auth.uid());
 CREATE POLICY "Users can update their own notifications" ON public.notifications FOR UPDATE USING (user_id = auth.uid());
+
+-- Documents RLS Policies
+CREATE POLICY "Users can view documents on accessible requests" ON public.documents FOR SELECT USING (
+    EXISTS (
+        SELECT 1 FROM public.withdrawal_requests wr
+        JOIN public.user_profiles up ON up.id = auth.uid()
+        WHERE wr.id = request_id
+        AND (
+            up.role = 'admin' OR
+            up.can_create_requests = true OR
+            up.can_approve_reject = true OR
+            up.can_disburse = true OR
+            wr.created_by = auth.uid() OR
+            wr.assigned_to = auth.uid()
+        )
+    )
+);
+
+CREATE POLICY "Archive team can upload documents" ON public.documents FOR INSERT WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM public.user_profiles
+        WHERE id = auth.uid()
+        AND (role = 'admin' OR can_create_requests = true)
+    )
+);
+
+
