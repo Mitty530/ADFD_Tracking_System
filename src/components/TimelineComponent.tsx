@@ -98,16 +98,34 @@ const TimelineComponent: React.FC<TimelineComponentProps> = ({
 
   if (timeline.length === 0) {
     return (
-      <div className="text-center py-12">
-        <Clock className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-500 mb-2">No Timeline Events</h3>
-        <p className="text-gray-400">Timeline events will appear here as the request progresses.</p>
-      </div>
+      <motion.div
+        className="text-center py-16 bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 rounded-3xl border-2 border-gray-200 shadow-xl"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <motion.div
+          className="relative inline-block"
+          animate={{ rotate: [0, 5, -5, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <Clock className="w-20 h-20 text-gray-300 mx-auto mb-6" />
+          <motion.div
+            className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-400/20 to-purple-400/20"
+            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </motion.div>
+        <h3 className="text-2xl font-bold text-gray-700 mb-3">No Timeline Events Yet</h3>
+        <p className="text-gray-500 font-medium max-w-md mx-auto leading-relaxed">
+          Timeline events will appear here as the request progresses through the workflow stages.
+        </p>
+      </motion.div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <motion.div
         className="flex items-center justify-between mb-8"
         initial={{ opacity: 0, y: -20 }}
@@ -116,42 +134,54 @@ const TimelineComponent: React.FC<TimelineComponentProps> = ({
       >
         <div className="flex items-center space-x-4">
           <motion.div
-            className="p-3 rounded-2xl bg-gradient-to-br from-purple-500 via-indigo-600 to-blue-700 text-white shadow-lg"
+            className="p-4 rounded-3xl bg-gradient-to-br from-purple-500 via-indigo-600 to-blue-700 text-white shadow-xl"
             whileHover={{ scale: 1.05, rotate: 5 }}
             transition={{ duration: 0.2 }}
           >
-            <Clock className="w-6 h-6" />
+            <Clock className="w-7 h-7" />
           </motion.div>
           <div>
-            <h3 className="text-xl font-bold bg-gradient-to-r from-gray-900 via-purple-800 to-blue-800 bg-clip-text text-transparent">
+            <h3 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-purple-800 to-blue-800 bg-clip-text text-transparent">
               Request Timeline
             </h3>
-            <p className="text-sm text-gray-600 font-medium">{timeline.length} events recorded</p>
+            <p className="text-sm text-gray-600 font-medium">{timeline.length} events recorded • Live tracking</p>
           </div>
         </div>
 
         <motion.div
-          className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-100 to-blue-100 rounded-xl border border-purple-200"
+          className="flex items-center space-x-3 px-5 py-3 bg-gradient-to-r from-purple-100 via-indigo-100 to-blue-100 rounded-2xl border-2 border-purple-200 shadow-lg"
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.3 }}
+          whileHover={{ scale: 1.02 }}
         >
-          <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
-          <span className="text-sm font-medium text-purple-700">Live Updates</span>
+          <motion.div
+            className="w-3 h-3 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full"
+            animate={{ scale: [1, 1.3, 1], opacity: [0.7, 1, 0.7] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <span className="text-sm font-bold text-purple-700">Live Updates</span>
         </motion.div>
       </motion.div>
 
       <div className="relative">
         {/* Enhanced Timeline Line */}
-        <div className="absolute left-8 top-0 bottom-0 w-1 bg-gradient-to-b from-purple-200 via-blue-200 to-green-200 rounded-full shadow-sm"></div>
+        <div className="absolute left-10 top-0 bottom-0 w-2 bg-gradient-to-b from-purple-200 via-blue-200 to-green-200 rounded-full shadow-lg"></div>
 
         {/* Animated progress line */}
         <motion.div
-          className="absolute left-8 top-0 w-1 bg-gradient-to-b from-purple-500 via-blue-500 to-green-500 rounded-full"
+          className="absolute left-10 top-0 w-2 bg-gradient-to-b from-purple-500 via-blue-500 to-green-500 rounded-full shadow-lg"
           initial={{ height: 0 }}
           animate={{ height: '100%' }}
-          transition={{ delay: 0.5, duration: 2, ease: "easeOut" }}
-        />
+          transition={{ delay: 0.5, duration: 2.5, ease: "easeOut" }}
+        >
+          {/* Animated shine effect */}
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-b from-white/40 via-transparent to-transparent rounded-full"
+            animate={{ y: ['-100%', '100%'] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 2.5 }}
+          />
+        </motion.div>
 
         {/* Timeline Events */}
         <div className="space-y-8">
@@ -165,24 +195,35 @@ const TimelineComponent: React.FC<TimelineComponentProps> = ({
             >
               {/* Enhanced Event Icon */}
               <motion.div
-                className={`relative z-10 flex items-center justify-center w-16 h-16 rounded-2xl border-3 shadow-xl ${getEventColor(event.eventType)}`}
-                whileHover={{ scale: 1.1, rotate: 5 }}
-                transition={{ duration: 0.2 }}
+                className={`relative z-10 flex items-center justify-center w-20 h-20 rounded-3xl border-4 shadow-2xl ${getEventColor(event.eventType)}`}
+                whileHover={{ scale: 1.15, rotate: 8 }}
+                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
               >
-                {getEventIcon(event.eventType)}
+                <div className="relative z-10">
+                  {getEventIcon(event.eventType)}
+                </div>
 
-                {/* Icon glow effect */}
+                {/* Enhanced glow effect */}
                 <motion.div
-                  className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/20 to-transparent"
-                  animate={{ opacity: [0.3, 0.6, 0.3] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/30 via-white/10 to-transparent"
+                  animate={{ opacity: [0.4, 0.8, 0.4] }}
+                  transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                 />
 
                 {/* Pulse effect for recent events */}
-                {index < 2 && (
+                {index < 3 && (
                   <motion.div
-                    className="absolute inset-0 rounded-2xl border-2 border-current opacity-30"
-                    animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0, 0.3] }}
+                    className="absolute inset-0 rounded-3xl border-3 border-current opacity-40"
+                    animate={{ scale: [1, 1.4, 1], opacity: [0.4, 0, 0.4] }}
+                    transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                  />
+                )}
+
+                {/* Sparkle effect for latest event */}
+                {index === 0 && (
+                  <motion.div
+                    className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full"
+                    animate={{ scale: [0, 1, 0], rotate: [0, 180, 360] }}
                     transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                   />
                 )}
@@ -191,16 +232,24 @@ const TimelineComponent: React.FC<TimelineComponentProps> = ({
               {/* Enhanced Event Content */}
               <div className="flex-1 min-w-0 pb-8">
                 <motion.div
-                  className="relative bg-white rounded-3xl border-2 border-gray-200 p-6 shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden"
+                  className="relative bg-white rounded-3xl border-2 border-gray-200 p-8 shadow-2xl hover:shadow-3xl transition-all duration-500 overflow-hidden"
                   style={{
-                    background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%)'
+                    background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 30%, #f1f5f9 70%, #e2e8f0 100%)'
                   }}
-                  whileHover={{ scale: 1.03, y: -6, rotateY: 2 }}
-                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                  whileHover={{ scale: 1.02, y: -8, rotateX: 2 }}
+                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  {/* Background decoration */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-green-500/5"></div>
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-full -translate-y-12 translate-x-12"></div>
+                  {/* Enhanced background decorations */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/8 via-purple-500/8 to-green-500/8"></div>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/15 to-purple-400/15 rounded-full -translate-y-16 translate-x-16"></div>
+                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-green-400/10 to-blue-400/10 rounded-full translate-y-12 -translate-x-12"></div>
+
+                  {/* Animated border glow */}
+                  <motion.div
+                    className="absolute inset-0 rounded-3xl border-2 border-gradient-to-r from-purple-300 via-blue-300 to-green-300 opacity-0"
+                    whileHover={{ opacity: 0.6 }}
+                    transition={{ duration: 0.3 }}
+                  />
 
                   <div className="relative z-10">
                   {/* Event Header */}

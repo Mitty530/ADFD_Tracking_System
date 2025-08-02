@@ -125,7 +125,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                   whileTap={{ scale: 0.9 }}
                   style={{ backgroundColor: '#DC2626', borderColor: '#EF4444' }}
                 >
-                  <X className="w-5 h-5 font-bold" />
+                  <X className="w-5 h-5 font-bold text-white" />
                 </motion.button>
               </div>
             </div>
@@ -164,10 +164,10 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                 onClick={handleConfirm}
                 disabled={isLoading}
                 className="flex-1 px-4 py-3 rounded-2xl font-medium text-white transition-all duration-200 flex items-center justify-center space-x-2"
-                style={{ 
+                style={{
                   backgroundColor: isLoading ? '#91A3B0' : styles.confirmButtonBg
                 }}
-                whileHover={!isLoading ? { 
+                whileHover={!isLoading ? {
                   scale: 1.02,
                   backgroundColor: styles.confirmButtonHover
                 } : {}}

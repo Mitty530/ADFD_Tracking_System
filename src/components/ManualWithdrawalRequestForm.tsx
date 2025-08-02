@@ -28,6 +28,7 @@ import {
 } from '../types/manualFormTypes';
 import { validateField, formatAmount, formatIBAN } from '../utils/formValidation';
 import { withdrawalRequestService } from '../services/withdrawalRequestService';
+import { requestStorageService } from '../services/requestStorageService';
 import { WithdrawalRequest, Currency, Priority } from '../types/withdrawalTypes';
 
 // Component props
@@ -205,7 +206,9 @@ const ManualWithdrawalRequestForm: React.FC<ManualWithdrawalRequestFormProps> = 
   };
 
   // Handle form submission
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    
     try {
       setFormState(prev => ({ ...prev, isSubmitting: true, errors: [] }));
 
@@ -227,7 +230,7 @@ const ManualWithdrawalRequestForm: React.FC<ManualWithdrawalRequestFormProps> = 
 
       // Convert and submit
       const withdrawalRequest = convertToWithdrawalRequest();
-      const requestId = await withdrawalRequestService.createRequest(withdrawalRequest);
+      const requestId = withdrawalRequestService.createRequest(withdrawalRequest);
 
       if (requestId) {
         // Clear draft
@@ -235,7 +238,9 @@ const ManualWithdrawalRequestForm: React.FC<ManualWithdrawalRequestFormProps> = 
 
         // Success callback
         if (onSuccess) {
-          setTimeout(() => onSuccess(requestId), 1500);
+          setTimeout(() => {
+            onSuccess(requestId);
+          }, 1500);
         }
       } else {
         throw new Error('Failed to create withdrawal request');

@@ -1,1 +1,4 @@
 .vercel
+# ESLint cache
+.eslintcache
+node_modules/.cache/.eslintcache

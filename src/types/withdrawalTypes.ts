@@ -5,7 +5,7 @@ export type UserRole = 'archive_team' | 'operations_team' | 'core_banking_team' 
 export type ActionType = 'approve' | 'reject' | 'disburse' | 'view';
 
 // Request stages
-export type RequestStage = 'initial_review' | 'technical_review' | 'core_banking' | 'disbursed';
+export type RequestStage = 'initial_review' | 'technical_review' | 'core_banking' | 'disbursed' | 'approved' | 'rejected';
 
 // Priority levels
 export type Priority = 'low' | 'medium' | 'high' | 'urgent';
@@ -230,10 +230,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, ActionType[]> = {
 
 // Stage transition rules
 export const STAGE_TRANSITIONS: Record<RequestStage, RequestStage[]> = {
-  initial_review: ['technical_review'],
-  technical_review: ['core_banking', 'initial_review'], // Can go back or forward
-  core_banking: ['disbursed'],
-  disbursed: [] // Final stage
+  initial_review: ['technical_review', 'approved', 'rejected'],
+  technical_review: ['core_banking', 'initial_review', 'approved', 'rejected'], // Can go back or forward
+  core_banking: ['disbursed', 'approved', 'rejected'],
+  disbursed: [], // Final stage
+  approved: ['disbursed'], // Approved requests can be disbursed
+  rejected: [] // Final stage
 };
 
 // Countries supported by ADFD

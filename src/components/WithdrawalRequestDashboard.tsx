@@ -23,6 +23,7 @@ import {
 import { withdrawalRequestService } from '../services/withdrawalRequestService';
 import { permissionService } from '../services/permissionService';
 import { notificationService } from '../services/notificationService';
+import { requestStorageService } from '../services/requestStorageService';
 
 import NotificationContainer from './NotificationContainer';
 import ConfirmDialog from './ConfirmDialog';
@@ -57,8 +58,10 @@ const WithdrawalRequestDashboard: React.FC = () => {
   const navigate = useNavigate();
   // Enhanced state management with proper types
   const [requests, setRequests] = useState<WithdrawalRequest[]>([]);
-  const [selectedRequest, setSelectedRequest] = useState<WithdrawalRequest | null>(null);
   const [showModal, setShowModal] = useState(false);
+const [selectedRequest, setSelectedRequest] = useState<WithdrawalRequest | null>(null);
+
+
   const [showRequestDetails, setShowRequestDetails] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState('all');
@@ -93,14 +96,6 @@ const WithdrawalRequestDashboard: React.FC = () => {
     return fullName.split(' ')[0];
   };
 
-  // Load data and initialize component
-  useEffect(() => {
-    loadRequests();
-    setAnimateStats(true);
-    setTimeout(() => setAnimateStats(false), 1000);
-  }, []);
-
-
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -120,7 +115,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
     return () => document.removeEventListener('keydown', handleEscKey);
   }, [showModal, confirmDialog.isOpen, permissionDenied.isOpen, showRequestDetails]);
 
-  // Data loading functions
+ // 1. First declare loadRequests
   const loadRequests = useCallback(() => {
     try {
       const allRequests = withdrawalRequestService.getAllRequests();
@@ -133,10 +128,17 @@ const WithdrawalRequestDashboard: React.FC = () => {
 
 
 
+  // Load data on mount and refresh when needed
+  useEffect(() => {
+  loadRequests();
+  setAnimateStats(true);
+  setTimeout(() => setAnimateStats(false), 1000);
+}, [loadRequests]);
+
   // Handle request details view
   const handleViewRequestDetails = useCallback((request: WithdrawalRequest) => {
-    setSelectedRequestId(request.id);
-    setShowRequestDetails(true);
+    setSelectedRequest(request);
+    setShowModal(true);
   }, []);
 
   // Handle manual form navigation
@@ -522,7 +524,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
         <motion.button
           key="approve"
           onClick={() => handleActionRequest('approve', request)}
-          className="text-white p-3 rounded-2xl shadow-lg"
+          className="text-gray-900e p-3 rounded-2xl shadow-lg"
           style={{ backgroundColor: '#4A8B2C' }}
           title="Approve (Operations Team Only)"
           whileHover={{ scale: 1.1, rotate: 5 }}
@@ -537,7 +539,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
         <motion.button
           key="reject"
           onClick={() => handleActionRequest('reject', request)}
-          className="text-white p-3 rounded-2xl shadow-lg"
+          className="text-gray-900 p-3 rounded-2xl shadow-lg"
           style={{ backgroundColor: '#DC3545' }}
           title="Reject (Operations Team Only)"
           whileHover={{ scale: 1.1, rotate: -5 }}
@@ -554,7 +556,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
         <motion.button
           key="disburse"
           onClick={() => handleActionRequest('disburse', request)}
-          className="text-white p-3 rounded-2xl shadow-lg"
+          className="text-gray-900 p-3 rounded-2xl shadow-lg"
           style={{ backgroundColor: '#007CBA' }}
           title="Mark as Disbursed (Core Banking Team Only)"
           whileHover={{ scale: 1.1, rotate: 10 }}
@@ -616,7 +618,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
                 whileHover={{ scale: 1.1, rotate: 5 }}
                 transition={{ duration: 0.3, type: "spring", stiffness: 300 }}
               >
-                <ADFDLogo size={28} className="text-white" />
+                <ADFDLogo size={28} className="text-gray-900" />
                 <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl blur opacity-25 animate-pulse"></div>
               </motion.div>
               <div className="space-y-1">
@@ -657,7 +659,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
               {user && (user.role === 'archive_team' || user.role === 'admin') && (
                 <motion.button
                   onClick={handleShowManualForm}
-                  className="relative group flex items-center space-x-3 px-6 py-3 text-white font-semibold rounded-2xl shadow-xl overflow-hidden min-w-fit whitespace-nowrap"
+                  className="relative group flex items-center space-x-3 px-6 py-3 text-gray-900 font-semibold rounded-2xl shadow-xl overflow-hidden min-w-fit whitespace-nowrap"
                   style={{ backgroundColor: '#4A8B2C' }}
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -678,7 +680,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
                     >
                       <Plus className="w-3 h-3" />
                     </motion.div>
-                    <span className="text-sm font-semibold tracking-wide">Create New Request</span>
+                    <span className="text-sm font-semibold tracking-wide text-white">Create New Request</span>
                   </div>
 
                   {/* Glow Effect */}
@@ -705,7 +707,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
                     {/* Enhanced User Avatar */}
                     <div className="relative">
                       <motion.div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg"
+                        className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-900 font-bold text-sm shadow-lg"
                         style={{ background: 'linear-gradient(135deg, #007CBA, #004D71)' }}
                         whileHover={{ rotate: 5 }}
                         transition={{ duration: 0.3 }}
@@ -790,13 +792,13 @@ const WithdrawalRequestDashboard: React.FC = () => {
                 whileHover={{ scale: 1.05, y: -5 }}
               >
                 <motion.div
-                  className="w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-3 shadow-lg"
+                  className="w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-3 shadow-lg text-white"
                   style={{ backgroundColor: stage.color }}
                   whileHover={{ scale: 1.1, rotate: 5 }}
                   transition={{ duration: 0.3 }}
                 >
                   <motion.span
-                    className="text-2xl font-bold text-white"
+                    className="text-2xl font-bold text-gray-900"
                     animate={{ scale: [1, 1.1, 1] }}
                     transition={{ duration: 2, repeat: Infinity, delay: index * 0.5 }}
                   >
@@ -851,7 +853,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
                   whileHover={{ scale: 1.1, rotate: 10 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <stat.icon className="w-6 h-6 text-white" />
+                  <stat.icon className="w-6 h-6 text-gray-900" />
                 </motion.div>
               </div>
               <div className="mt-4 h-2 rounded-full overflow-hidden" style={{ backgroundColor: '#F1F3F4' }}>
@@ -877,76 +879,53 @@ const WithdrawalRequestDashboard: React.FC = () => {
           whileHover={{ scale: 1.01, y: -2 }}
         >
           <div className="flex flex-wrap items-center gap-4">
-            <motion.div
-              className="flex items-center space-x-3 rounded-2xl px-4 py-3"
-              style={{ backgroundColor: '#F9F9F9', border: '1px solid #DEE1E3' }}
-              whileHover={{ scale: 1.02 }}
-              transition={{ duration: 0.2 }}
-            >
-              <Search className="w-5 h-5" style={{ color: '#007CBA' }} />
-              <input
-                type="text"
-                placeholder="Search by reference, beneficiary, or project..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-transparent border-none outline-none w-72 placeholder-gray-500"
-                style={{ color: '#323E48' }}
-              />
-            </motion.div>
-
-            <motion.select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="rounded-2xl px-4 py-3 focus:outline-none focus:ring-2"
-              style={{
-                backgroundColor: '#F9F9F9',
-                border: '1px solid #DEE1E3',
-                color: '#323E48'
-              }}
-              whileHover={{ scale: 1.02 }}
-              transition={{ duration: 0.2 }}
-            >
-              <option value="all">All Status</option>
-              <option value="initial_review">Initial Review</option>
-              <option value="technical_review">Technical Review</option>
-              <option value="core_banking">Core Banking</option>
-              <option value="disbursed">Disbursed</option>
-            </motion.select>
-
-            <motion.select
-              value={filterCountry}
-              onChange={(e) => setFilterCountry(e.target.value)}
-              className="rounded-2xl px-4 py-3 focus:outline-none focus:ring-2"
-              style={{
-                backgroundColor: '#F9F9F9',
-                border: '1px solid #DEE1E3',
-                color: '#323E48'
-              }}
-              whileHover={{ scale: 1.02 }}
-              transition={{ duration: 0.2 }}
-            >
-              <option value="all">All Countries</option>
-              {Array.from(new Set(requests.map(r => r.country))).map(country => (
-                <option key={country} value={country}>{country}</option>
-              ))}
-            </motion.select>
-
-            <motion.div
-              className="ml-auto rounded-2xl px-4 py-3"
-              style={{ backgroundColor: '#F0F8F0', border: '1px solid #4A8B2C' }}
-              whileHover={{ scale: 1.05 }}
-              transition={{ duration: 0.2 }}
-            >
-              <div className="flex items-center space-x-2">
-                <motion.div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: '#4A8B2C' }}
-                  animate={{ scale: [1, 1.3, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
+            {/* Search Field */}
+            <div className="flex-1 min-w-[320px]">
+              <div className="relative flex items-center h-12 bg-white rounded-xl border-2 border-gray-100 focus-within:border-blue-300 transition-all duration-300">
+                <Search className="w-5 h-5 text-gray-400 ml-4" />
+                <input
+                  type="text"
+                  placeholder="Search by reference, beneficiary, or project..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="flex-1 h-full px-3 text-gray-700 bg-transparent border-none outline-none focus:ring-0"
                 />
-                <span className="text-sm font-medium" style={{ color: '#4A8B2C' }}>Live Tracking Active</span>
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="p-2 mr-2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
-            </motion.div>
+            </div>
+
+            {/* Filter Dropdowns */}
+            <div className="flex gap-4">
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="h-12 px-4 rounded-xl border-2 border-gray-100 focus:border-blue-300 outline-none transition-all duration-300"
+              >
+                <option value="all">All Status</option>
+                <option value="initial_review">Initial Review</option>
+                <option value="technical_review">Technical Review</option>
+                <option value="core_banking">Core Banking</option>
+                <option value="disbursed">Disbursed</option>
+              </select>
+
+              <select
+                value={filterCountry}
+                onChange={(e) => setFilterCountry(e.target.value)}
+                className="h-12 px-4 rounded-xl border-2 border-gray-100 focus:border-blue-300 outline-none transition-all duration-300"
+              >
+                <option value="all">All Countries</option>
+                {Array.from(new Set(requests.map(r => r.country))).map(country => (
+                  <option key={country} value={country}>{country}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </motion.div>
 
@@ -1044,7 +1023,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
                       <div className="flex items-center space-x-2">
                         <motion.button
                           onClick={() => handleViewRequestDetails(request)}
-                          className="text-white p-3 rounded-2xl shadow-lg group-hover:shadow-xl"
+                          className="text-gray-900 p-3 rounded-2xl shadow-lg group-hover:shadow-xl"
                           style={{ backgroundColor: '#007CBA' }}
                           title="View Details"
                           whileHover={{ scale: 1.1, rotate: 5 }}
@@ -1054,7 +1033,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
                           <Eye className="w-5 h-5" />
                         </motion.button>
 
-                        {getActionButtonsForRequest(request).map((button, btnIndex) => (
+                        {/* {getActionButtonsForRequest(request).map((button, btnIndex) => (
                           <motion.div
                             key={btnIndex}
                             initial={{ opacity: 0, scale: 0.8 }}
@@ -1063,7 +1042,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
                           >
                             {button}
                           </motion.div>
-                        ))}
+                        ))} */}
                       </div>
                     </td>
                   </motion.tr>
@@ -1077,164 +1056,7 @@ const WithdrawalRequestDashboard: React.FC = () => {
 
 
 
-      {/* Premium Request Details Modal */}
-      {showModal && selectedRequest && (
-        <motion.div
-          className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-start justify-center p-4 pt-8"
-          style={{ zIndex: 9999, top: 0, left: 0 }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowModal(false);
-            }
-          }}
-        >
-          <motion.div
-            className="bg-white rounded-3xl shadow-2xl max-w-5xl w-full border border-gray-200"
-            style={{ zIndex: 10000 }}
-            initial={{ scale: 0.8, opacity: 0, y: 0 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.8, opacity: 0, y: 0 }}
-            transition={{ duration: 0.3 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="sticky top-0 bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-t-3xl z-10 shadow-lg">
-              <div className="flex justify-between items-center">
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 }}
-                >
-                  <h2 className="text-2xl font-bold">Request Details</h2>
-                  <p className="text-blue-100">{selectedRequest.refNumber} • ADFD Tracking View</p>
-                </motion.div>
-                <motion.button
-                  onClick={() => setShowModal(false)}
-                  className="text-white hover:text-white bg-red-600 hover:bg-red-700 p-3 rounded-full transition-all duration-200 flex items-center justify-center shadow-xl border-2 border-red-500"
-                  title="Close"
-                  whileHover={{ scale: 1.1, rotate: 90 }}
-                  whileTap={{ scale: 0.9 }}
-                  style={{ backgroundColor: '#DC2626', borderColor: '#EF4444' }}
-                >
-                  <X className="w-6 h-6 font-bold" />
-                </motion.button>
-              </div>
-            </div>
-
-            <div className="max-h-[80vh] overflow-y-auto">
-              <div className="p-8 space-y-8">
-                <motion.div
-                  className="backdrop-blur-md bg-gradient-to-r from-blue-50/80 to-purple-50/80 p-6 rounded-3xl border border-white/20"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2, duration: 0.5 }}
-                >
-                  <motion.h3
-                    className="font-bold text-gray-900 mb-4 flex items-center"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.3, duration: 0.5 }}
-                  >
-                    <FileText className="w-5 h-5 mr-2 text-blue-500" />
-                    Project Information
-                  </motion.h3>
-                  <div className="grid grid-cols-2 gap-6">
-                    {[
-                      { label: 'Project Number', value: selectedRequest.projectNumber },
-                      { label: 'Country', value: selectedRequest.country },
-                      { label: 'Beneficiary', value: selectedRequest.beneficiaryName },
-                      { label: 'Amount', value: `${selectedRequest.amount.toLocaleString()} ${selectedRequest.currency}` },
-                      { label: 'Value Date', value: new Date(selectedRequest.valueDate).toLocaleDateString() },
-                      { label: 'Processing Time', value: `${selectedRequest.processingDays} days` }
-                    ].map((item, index) => (
-                      <motion.div
-                        key={item.label}
-                        className="space-y-1"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 * index + 0.4, duration: 0.3 }}
-                      >
-                        <span className="text-sm text-gray-600 font-medium">{item.label}</span>
-                        <div className="text-lg font-semibold text-gray-900">{item.value}</div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  className="backdrop-blur-md bg-gradient-to-r from-blue-50/80 to-purple-50/80 p-6 rounded-3xl border border-white/20"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4, duration: 0.5 }}
-                >
-                  <motion.h3
-                    className="font-bold text-gray-900 mb-6 flex items-center"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.5, duration: 0.5 }}
-                  >
-                    <Activity className="w-5 h-5 mr-2 text-blue-500" />
-                    Progress Timeline
-                  </motion.h3>
-                  <div className="relative">
-                    <div className="flex items-center justify-between mb-6">
-                      {['Initial Review', 'Technical Review', 'Core Banking', 'Disbursed'].map((stageName, index) => {
-                        const stages = ['initial_review', 'technical_review', 'core_banking', 'disbursed'];
-                        const currentIndex = stages.indexOf(selectedRequest.currentStage);
-                        const isActive = index <= currentIndex;
-                        const isCurrent = index === currentIndex;
-
-                        return (
-                          <motion.div
-                            key={stageName}
-                            className="flex flex-col items-center flex-1"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 * index + 0.6, duration: 0.5 }}
-                          >
-                            <motion.div
-                              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 ${
-                                isActive
-                                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
-                                  : 'bg-gray-200 text-gray-500'
-                              }`}
-                              animate={isActive ? { scale: [1, 1.1, 1] } : {}}
-                              transition={{ duration: 2, repeat: Infinity, delay: index * 0.5 }}
-                              whileHover={{ scale: 1.1, rotate: 5 }}
-                            >
-                              {isActive ? '✓' : index + 1}
-                            </motion.div>
-                            <div className="mt-3 text-center">
-                              <div className={`text-sm font-medium ${isActive ? 'text-blue-600' : 'text-gray-500'}`}>
-                                {stageName}
-                              </div>
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-                    <motion.div
-                      className="backdrop-blur-md bg-white/80 rounded-2xl p-4 space-y-2 border border-white/20"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.8, duration: 0.5 }}
-                    >
-                      <div className="text-sm text-gray-600">
-                        <strong>Current Status:</strong> {selectedRequest.status}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        <strong>Assigned To:</strong> {selectedRequest.assignedTo || 'Unassigned'}
-                      </div>
-                    </motion.div>
-                  </div>
-                </motion.div>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
+      
 
       {/* Notification Container */}
       <NotificationContainer />
@@ -1251,11 +1073,11 @@ const WithdrawalRequestDashboard: React.FC = () => {
 
       {/* Request Details Modal */}
       <RequestDetailsModal
-        isOpen={showRequestDetails}
-        requestId={selectedRequestId}
+        isOpen={showModal}
+        request={selectedRequest}
         onClose={() => {
-          setShowRequestDetails(false);
-          setSelectedRequestId(null);
+          setShowModal(false);
+          setSelectedRequest(null);
         }}
       />
 
@@ -1268,10 +1090,6 @@ const WithdrawalRequestDashboard: React.FC = () => {
         requiredRole={permissionDenied.requiredRole}
         message={permissionDenied.message}
       />
-
-
-
-
     </div>
   );
 };

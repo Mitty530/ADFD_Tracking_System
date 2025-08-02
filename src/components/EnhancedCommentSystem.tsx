@@ -262,6 +262,7 @@ const EnhancedCommentSystem: React.FC<EnhancedCommentSystemProps> = ({
                   className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-700 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:from-green-700 hover:to-emerald-800 transition-all duration-300 shadow-lg hover:shadow-xl"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
+                  style={{ zIndex: 10, position: 'relative' }}
                 >
                   {isSubmitting ? (
                     <motion.div
@@ -359,32 +360,55 @@ const EnhancedCommentSystem: React.FC<EnhancedCommentSystemProps> = ({
 
       {/* Comments Summary */}
       <motion.div
-        className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-2xl p-6 border border-gray-200"
+        className="bg-gradient-to-br from-white via-green-50 to-emerald-50 rounded-3xl p-8 border-2 border-green-200 shadow-xl"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.4 }}
+        whileHover={{ scale: 1.01, y: -2 }}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{comments.length}</div>
-              <div className="text-sm text-gray-600">Total Comments</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-yellow-700">{comments.filter(c => c.isInternal).length}</div>
-              <div className="text-sm text-gray-600">Internal</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-700">{comments.filter(c => !c.isInternal).length}</div>
-              <div className="text-sm text-gray-600">Public</div>
-            </div>
+          <div className="flex items-center space-x-8">
+            {/* Total Comments */}
+            <motion.div
+              className="text-center p-4 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg"
+              whileHover={{ scale: 1.05, rotate: 2 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="text-3xl font-bold mb-1">{comments.length}</div>
+              <div className="text-sm font-medium opacity-90">Total Comments</div>
+            </motion.div>
+            
+            {/* Internal Comments */}
+            <motion.div
+              className="text-center p-4 rounded-2xl bg-gradient-to-br from-yellow-500 to-amber-600 text-white shadow-lg"
+              whileHover={{ scale: 1.05, rotate: -2 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="text-3xl font-bold mb-1">{comments.filter(c => c.isInternal).length}</div>
+              <div className="text-sm font-medium opacity-90">Internal</div>
+            </motion.div>
+            
+            {/* Public Comments */}
+            <motion.div
+              className="text-center p-4 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg"
+              whileHover={{ scale: 1.05, rotate: 2 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="text-3xl font-bold mb-1">{comments.filter(c => !c.isInternal).length}</div>
+              <div className="text-sm font-medium opacity-90">Public</div>
+            </motion.div>
           </div>
           
           {comments.length > 0 && (
-            <div className="text-right">
-              <div className="text-sm text-gray-600">Last comment</div>
-              <div className="font-medium text-gray-900">{formatDate(comments[comments.length - 1].createdAt)}</div>
-            </div>
+            <motion.div
+              className="text-right bg-white/60 backdrop-blur-sm rounded-2xl p-4 border border-green-200"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5, duration: 0.3 }}
+            >
+              <div className="text-sm font-medium text-gray-600 mb-1">Last comment</div>
+              <div className="font-bold text-gray-900">{formatDate(comments[comments.length - 1].createdAt)}</div>
+            </motion.div>
           )}
         </div>
       </motion.div>

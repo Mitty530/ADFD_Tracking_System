@@ -277,6 +277,7 @@ const CommentSystem: React.FC<CommentSystemProps> = ({
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4, duration: 0.3 }}
+                style={{ zIndex: 10, position: 'relative' }}
               >
                 {/* Button glow effect */}
                 <motion.div

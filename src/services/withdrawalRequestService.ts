@@ -290,6 +290,44 @@ class WithdrawalRequestService {
     };
   }
 
+  // Approve request
+  approveRequest(requestId: string, userId: string, notes?: string): boolean {
+    try {
+      const success = this.updateRequest(requestId, {
+        status: 'Approved',
+        currentStage: 'approved'
+      });
+      
+      if (success) {
+        this.logAction(requestId, 'approve', userId, notes || 'Request approved');
+      }
+      
+      return success;
+    } catch (error) {
+      console.error('Error approving request:', error);
+      return false;
+    }
+  }
+
+  // Reject request
+  rejectRequest(requestId: string, userId: string, reason?: string): boolean {
+    try {
+      const success = this.updateRequest(requestId, {
+        status: 'Rejected',
+        currentStage: 'rejected'
+      });
+      
+      if (success) {
+        this.logAction(requestId, 'reject', userId, reason || 'Request rejected');
+      }
+      
+      return success;
+    } catch (error) {
+      console.error('Error rejecting request:', error);
+      return false;
+    }
+  }
+
   // Clear all data (for testing)
   clearAllData(): void {
     Object.values(STORAGE_KEYS).forEach(key => {

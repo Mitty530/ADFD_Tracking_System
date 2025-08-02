@@ -1,6 +1,6 @@
 // Authorized ADFD Team Members
 // Only these users are allowed to access the system
-// Updated: Added Ousame and Omran as admin users
+// Updated: Added Ousame as admin user
 
 export interface AuthorizedUser {
   email: string;
@@ -135,17 +135,7 @@ export const AUTHORIZED_USERS: AuthorizedUser[] = [
   },
   {
     email: 'ousmanehabi.168@gmail.com',
-    name: 'Ousame',
-    role: 'admin',
-    department: 'Administration',
-    can_create_requests: true,
-    can_approve_reject: true,
-    can_disburse: true,
-    view_only_access: false
-  },
-  {
-    email: 'alomran303@gmail.com',
-    name: 'Omran',
+    name: 'Ousmane',
     role: 'admin',
     department: 'Administration',
     can_create_requests: true,
@@ -173,8 +163,7 @@ export const getAuthorizedUser = (email: string): AuthorizedUser | null => {
 export const validateEmailDomain = (email: string): boolean => {
   const adminEmails = [
     'Mamadouourydiallo819@gmail.com',
-    'ousmanehabi.168@gmail.com',
-    'alomran303@gmail.com'
+    'ousmanehabi.168@gmail.com'
   ];
   const allowedDomain = '@adfd.ae';
 

@@ -1,49 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   User as UserIcon,
-  Activity,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Edit3,
-  Bell
+  Bell,
+  Edit3
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
-interface ActivityLog {
-  id: string;
-  action: string;
+interface NotificationPreference {
+  id: 'newRequests' | 'statusUpdates' | 'systemAlerts' | 'weeklyReports';
+  icon: string;
+  title: string;
   description: string;
-  timestamp: Date;
-  type: 'create' | 'approve' | 'reject' | 'disburse' | 'view' | 'edit';
-  requestId?: string;
 }
 
 const UserProfile: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
-  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
 
   // Enhanced user data based on profile.txt structure
   const userData = {
     // Basic Info
-    fullName: user?.name || 'Ahmed Al-Mahmoud',
-    email: user?.email || 'ahmed.mahmoud@adfd.ae',
+    fullName: user?.name || 'Ousmane Diallo',
+    email: user?.email || 'ousmane.diallo@adfd.ae',
     role: user?.role || 'loan_admin',
     department: 'Operations Department',
     position: 'Senior Loan Administrator',
 
     // Contact
-    phone: '+971 2 123 4567',
-    mobile: '+971 50 123 4567',
-    address: 'Al Buteen P.O. Box: 814, Abu Dhabi, UAE',
+    phone: '+971 2 234 5678',
+    mobile: '+971 50 234 5678',
+    address: 'Al Reem Island P.O. Box: 912, Abu Dhabi, UAE',
 
     // Work Details
-    supervisor: 'Dr. Sarah Al-Zahra',
+    supervisor: 'Dr. Mohammed Al-Hassan',
     officeLocation: 'Abu Dhabi Main Office',
 
     // Settings
@@ -57,100 +50,13 @@ const UserProfile: React.FC = () => {
     lastLogin: '2024-11-20 09:15:00',
 
     // Enhanced stats
-    totalRequests: 156,
-    approvalRate: 94.2,
-    avgProcessingTime: 2.3,
-    performanceScore: 98
+    totalRequests: 142,
+    approvalRate: 96.5,
+    avgProcessingTime: 1.8,
+    performanceScore: 99
   };
 
-  // Mock activity data with enhanced details - in real app, this would come from API
-  useEffect(() => {
-    const mockActivities: ActivityLog[] = [
-      {
-        id: '1',
-        action: 'Approved withdrawal request',
-        description: 'ARC/2024/156 - Madagascar Infrastructure Project',
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-        type: 'approve',
-        requestId: 'ARC/2024/156'
-      },
-      {
-        id: '2',
-        action: 'Updated project information',
-        description: 'Project 4313 - Phase 2 details updated',
-        timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
-        type: 'edit',
-        requestId: 'Project 4313'
-      },
-      {
-        id: '3',
-        action: 'Generated monthly report',
-        description: 'October 2024 disbursement report',
-        timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
-        type: 'view'
-      },
-      {
-        id: '4',
-        action: 'Profile updated',
-        description: 'Contact information modified',
-        timestamp: new Date(Date.now() - 72 * 60 * 60 * 1000),
-        type: 'edit'
-      }
-    ];
-    setActivityLogs(mockActivities);
-  }, []);
-
-
-
-
-
-  const getActivityIcon = (type: ActivityLog['type']) => {
-    const iconConfig = {
-      create: { icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-100' },
-      approve: { icon: CheckCircle, color: 'text-blue-500', bg: 'bg-blue-100' },
-      reject: { icon: XCircle, color: 'text-red-500', bg: 'bg-red-100' },
-      disburse: { icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-100' },
-      view: { icon: Activity, color: 'text-gray-500', bg: 'bg-gray-100' },
-      edit: { icon: Edit3, color: 'text-orange-500', bg: 'bg-orange-100' }
-    };
-
-    const config = iconConfig[type] || iconConfig.view;
-    const IconComponent = config.icon;
-
-    return (
-      <motion.div
-        className={`w-10 h-10 ${config.bg} rounded-xl flex items-center justify-center shadow-sm`}
-        whileHover={{ scale: 1.1, rotate: 5 }}
-        transition={{ type: "spring", stiffness: 400, damping: 17 }}
-      >
-        <IconComponent className={`w-5 h-5 ${config.color}`} />
-      </motion.div>
-    );
-  };
-
-  const formatTimeAgo = (date: Date) => {
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return 'Just now';
-    if (diffInHours < 24) return `${diffInHours} hours ago`;
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays === 1) return 'Yesterday';
-    return `${diffInDays} days ago`;
-  };
-
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        delayChildren: 0.1,
-        staggerChildren: 0.1
-      }
-    }
-  };
-
+  // Add the missing animation variants
   const itemVariants = {
     hidden: { y: 20, opacity: 0 },
     visible: {
@@ -179,10 +85,63 @@ const UserProfile: React.FC = () => {
       opacity: 0,
       x: 20,
       transition: {
+        type: "tween" as const,
         duration: 0.2
       }
     }
   };
+
+  // Add notification preferences state
+  const [notificationPreferences, setNotificationPreferences] = useState({
+    newRequests: true,
+    statusUpdates: true,
+    systemAlerts: false,
+    weeklyReports: true
+  });
+
+  const handleToggleNotification = (key: keyof typeof notificationPreferences) => {
+    setNotificationPreferences(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const handleToggleAll = () => {
+    const areAllEnabled = Object.values(notificationPreferences).every(value => value);
+    setNotificationPreferences({
+      newRequests: !areAllEnabled,
+      statusUpdates: !areAllEnabled,
+      systemAlerts: !areAllEnabled,
+      weeklyReports: !areAllEnabled
+    });
+  };
+
+  const notificationOptions: NotificationPreference[] = [
+    {
+      id: 'newRequests',
+      icon: '📝',
+      title: 'New Withdrawal Requests',
+      description: 'When new requests are submitted',
+    },
+    {
+      id: 'statusUpdates',
+      icon: '🔄',
+      title: 'Status Updates',
+      description: 'When request status changes',
+    },
+    {
+      id: 'systemAlerts',
+      icon: '⚠️',
+      title: 'System Alerts',
+      description: 'Important system notifications',
+    },
+    {
+      id: 'weeklyReports',
+      icon: '📊',
+      title: 'Weekly Reports',
+      description: 'Weekly summary of activities',
+    }
+  ];
 
   if (!user) return null;
 
@@ -219,15 +178,15 @@ const UserProfile: React.FC = () => {
 
       <motion.div
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
+        // variants={containerVariants}
+        // initial="hidden"
+        // animate="visible"
       >
 
         {/* Header */}
         <motion.div
           className="flex items-center space-x-4 mb-8"
-          variants={itemVariants}
+          // variants={itemVariants}
         >
           <motion.button
             onClick={() => navigate('/dashboard')}
@@ -241,7 +200,7 @@ const UserProfile: React.FC = () => {
 
           <div>
             <motion.h1
-              className="text-4xl font-bold text-white drop-shadow-lg"
+              className="text-4xl font-bold text-gray-900 drop-shadow-lg"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
@@ -262,13 +221,11 @@ const UserProfile: React.FC = () => {
         {/* Enhanced Profile Header - Matching Design */}
         <motion.div
           className="bg-gradient-to-br from-blue-500 via-blue-600 to-purple-600 rounded-3xl shadow-2xl overflow-hidden mb-8 max-w-5xl mx-auto"
-          variants={itemVariants}
           whileHover={{ y: -5 }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
         >
           <div className="p-8 relative">
-            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
-              {/* Left Section - Avatar and User Info */}
+            <div className="flex items-start justify-between gap-6">
               <div className="flex items-start gap-6">
                 {/* Profile Avatar */}
                 <motion.div
@@ -276,39 +233,23 @@ const UserProfile: React.FC = () => {
                   whileHover={{ scale: 1.05 }}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
                 >
-                  <div className="w-24 h-24 rounded-2xl bg-blue-400/30 backdrop-blur-sm border-2 border-white/20 flex items-center justify-center text-white text-2xl font-bold shadow-xl">
+                  <div className="w-24 h-24 rounded-2xl bg-blue-400/30 backdrop-blur-sm border-2 border-white/20 flex items-center justify-center text-gray-900 text-2xl font-bold shadow-xl">
                     {userData.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                   </div>
                 </motion.div>
 
                 {/* User Information */}
-                <div className="text-white">
+                <div>
                   <motion.h2
-                    className="text-3xl lg:text-4xl font-bold text-white mb-4"
+                    className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.3 }}
                   >
                     {userData.fullName}
                   </motion.h2>
-
-                  <motion.div
-                    className="flex flex-wrap items-center gap-3 mb-3"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 }}
-                  >
-                    <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-400/30 backdrop-blur-sm border border-white/20">
-                      <div className="w-2 h-2 rounded-full bg-white"></div>
-                      <span className="text-white font-semibold">Loan Administrator</span>
-                    </div>
-                    <div className="px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/20">
-                      <span className="text-white font-semibold">{userData.department}</span>
-                    </div>
-                  </motion.div>
-
                   <motion.p
-                    className="text-blue-100 font-semibold text-lg"
+                    className="text-gray-900 font-semibold text-lg"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.5 }}
@@ -318,9 +259,9 @@ const UserProfile: React.FC = () => {
                 </div>
               </div>
 
-              {/* Right Section - Edit Button */}
+              {/* Edit Button - Aligned with user info */}
               <motion.button
-                className="flex items-center gap-2 px-6 py-3 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30 text-white font-semibold hover:bg-white/30 transition-all duration-300 shadow-lg"
+                className="flex items-center gap-2 px-6 py-3 bg-white/90 backdrop-blur-sm rounded-xl border-2 border-white/50 text-gray-900 font-semibold transition-all duration-300 shadow-lg hover:shadow-xl"
                 whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
                 initial={{ opacity: 0, scale: 0.8 }}
@@ -328,37 +269,9 @@ const UserProfile: React.FC = () => {
                 transition={{ delay: 0.6 }}
               >
                 <Edit3 className="w-5 h-5" />
-                <span>Edit</span>
+                <span>Edit Profile</span>
               </motion.button>
             </div>
-
-            {/* Statistics Section */}
-            <motion.div
-              className="grid grid-cols-2 lg:grid-cols-4 gap-6"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7 }}
-            >
-              {[
-                { icon: '📊', value: userData.totalRequests, label: 'Total Requests' },
-                { icon: '📈', value: `${userData.approvalRate}%`, label: 'Approval Rate' },
-                { icon: '⏱️', value: `${userData.avgProcessingTime} days`, label: 'Avg Processing' },
-                { icon: '⭐', value: `${userData.performanceScore}%`, label: 'Performance' }
-              ].map((stat, index) => (
-                <motion.div
-                  key={stat.label}
-                  className="text-center text-white"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.8 + index * 0.1 }}
-                  whileHover={{ scale: 1.05 }}
-                >
-                  <div className="text-2xl mb-2">{stat.icon}</div>
-                  <div className="text-2xl lg:text-3xl font-bold mb-1">{stat.value}</div>
-                  <div className="text-blue-200 text-sm font-medium">{stat.label}</div>
-                </motion.div>
-              ))}
-            </motion.div>
           </div>
         </motion.div>
 
@@ -369,17 +282,15 @@ const UserProfile: React.FC = () => {
             <motion.div className="flex flex-wrap gap-2 justify-center" layout>
               {[
                 { id: 'profile', label: '👤 Profile', icon: UserIcon },
-                { id: 'notifications', label: '🔔 Notifications', icon: Bell },
-                { id: 'activity', label: '📊 Activity', icon: Activity }
+                { id: 'notifications', label: '🔔 Notifications', icon: Bell }
               ].map((tab, index) => (
                 <motion.button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center space-x-2 px-4 lg:px-6 py-3 rounded-xl font-bold transition-all duration-300 relative flex-1 min-w-fit ${
-                    activeTab === tab.id
-                      ? 'text-white shadow-xl'
+                  className={`flex items-center space-x-2 px-4 lg:px-6 py-3 rounded-xl font-bold transition-all duration-300 relative flex-1 min-w-fit ${activeTab === tab.id
+                      ? 'text-gray-900 shadow-xl'
                       : 'text-slate-700 hover:text-blue-700 hover:bg-blue-100 border-2 border-transparent hover:border-blue-300'
-                  }`}
+                    }`}
                   whileHover={{ y: -2 }}
                   whileTap={{ y: 0 }}
                   initial={{ opacity: 0, y: 20 }}
@@ -519,8 +430,6 @@ const UserProfile: React.FC = () => {
               </motion.div>
             )}
 
-
-
             {/* Enhanced Notifications Tab */}
             {activeTab === 'notifications' && (
               <motion.div
@@ -531,80 +440,43 @@ const UserProfile: React.FC = () => {
                 exit="exit"
                 className="space-y-6 max-w-4xl mx-auto"
               >
-
-              </motion.div>
-            )}
-
-            {/* Enhanced Activity Tab */}
-            {activeTab === 'activity' && (
-              <motion.div
-                key="activity"
-                variants={tabContentVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                className="space-y-6 max-w-4xl mx-auto"
-              >
-                <motion.div
-                  className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-2xl shadow-xl border-2 border-cyan-300 p-6 hover:shadow-2xl hover:border-cyan-400"
-                  whileHover={{ y: -5 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                >
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="text-2xl">📊</div>
-                    <h3 className="text-xl font-bold text-slate-800">Recent Activity</h3>
-                  </div>
-
-                  <motion.div
-                    className="space-y-4"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ staggerChildren: 0.1 }}
-                  >
-                    {activityLogs.map((log, index) => (
-                      <motion.div
-                        key={log.id}
-                        className="flex items-start gap-4 p-5 bg-cyan-50 rounded-xl hover:bg-cyan-100 transition-all duration-300 group cursor-pointer border border-cyan-200 hover:border-cyan-300"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 * index }}
-                        whileHover={{ scale: 1.02, y: -2 }}
-                      >
-                        {getActivityIcon(log.type)}
-                        <div className="flex-1">
-                          <p className="font-bold text-slate-800 group-hover:text-cyan-700 transition-colors mb-1">{log.action}</p>
-                          <p className="text-sm text-slate-700 font-medium mb-2">{log.description}</p>
-                          <div className="flex flex-wrap items-center gap-3">
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-4 w-4 text-cyan-600" />
-                              <span className="text-xs text-slate-600 font-semibold">{formatTimeAgo(log.timestamp)}</span>
-                            </div>
-                            {log.requestId && (
-                              <span className="text-xs bg-gradient-to-r from-cyan-500 to-cyan-600 text-white px-3 py-1 rounded-full font-bold shadow-sm">
-                                {log.requestId}
-                              </span>
-                            )}
+                <div className="grid gap-6">
+                  {notificationOptions.map((pref) => (
+                    <motion.div
+                      key={pref.id}
+                      className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl shadow-xl border-2 border-blue-300 p-6 hover:shadow-2xl hover:border-blue-400 transition-all duration-300"
+                      whileHover={{ y: -2 }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-start gap-4">
+                          <div className="text-2xl">{pref.icon}</div>
+                          <div>
+                            <h3 className="text-lg font-bold text-slate-800">{pref.title}</h3>
+                            <p className="text-sm text-slate-600">{pref.description}</p>
                           </div>
                         </div>
-                      </motion.div>
-                    ))}
-                  </motion.div>
-
-                  <motion.div
-                    className="mt-6 text-center"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.5 }}
-                  >
-                    <motion.button
-                      className="px-8 py-4 bg-gradient-to-r from-cyan-600 to-cyan-700 text-white rounded-xl font-bold shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-cyan-500"
-                      whileHover={{ scale: 1.05, y: -2 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      View All Activity
-                    </motion.button>
-                  </motion.div>
-                </motion.div>
+                        <motion.button
+                          onClick={() => handleToggleNotification(pref.id)}
+                          className="relative w-16 h-8 rounded-full transition-colors duration-300"
+                          style={{
+                            backgroundColor: notificationPreferences[pref.id] ? '#0EA5E9' : '#E2E8F0'
+                          }}
+                        >
+                          <motion.div
+                            className="absolute w-6 h-6 bg-white rounded-full shadow-lg top-1"
+                            animate={{
+                              x: notificationPreferences[pref.id] ? 32 : 4
+                            }}
+                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                          />
+                          <span className="sr-only">
+                            {notificationPreferences[pref.id] ? 'Active' : 'Inactive'}
+                          </span>
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

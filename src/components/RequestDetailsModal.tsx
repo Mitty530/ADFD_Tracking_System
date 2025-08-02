@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  X, 
-  Calendar, 
-  DollarSign, 
-  MapPin, 
-  User, 
-  Clock, 
-  MessageCircle, 
-  FileText, 
+import {
+  X,
+  Calendar,
+  DollarSign,
+  MapPin,
+  User,
+  Clock,
+  MessageCircle,
+  FileText,
   Activity,
   Eye,
   AlertCircle,
@@ -28,16 +28,17 @@ import HorizontalTimelineComponent from './HorizontalTimelineComponent';
 import EnhancedOverviewSection from './EnhancedOverviewSection';
 import EnhancedCommentSystem from './EnhancedCommentSystem';
 import EnhancedDocumentsSection from './EnhancedDocumentsSection';
+import ConfirmDialog from './ConfirmDialog';
 
 interface RequestDetailsModalProps {
   isOpen: boolean;
-  requestId: string | null;
+  request: WithdrawalRequest | null;
   onClose: () => void;
 }
 
 const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
   isOpen,
-  requestId,
+  request,
   onClose
 }) => {
   const { user } = useAuth();
@@ -48,14 +49,18 @@ const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
     isLoading: false
   });
   const [requestDetails, setRequestDetails] = useState<RequestDetails | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Load request details when modal opens
   useEffect(() => {
-    if (isOpen && requestId) {
+    if (isOpen && request) {
       setModalState(prev => ({ ...prev, isLoading: true }));
-      loadRequestDetails(requestId);
+      loadRequestDetails(request.id);
     }
-  }, [isOpen, requestId]);
+  }, [isOpen, request]);
 
   const loadRequestDetails = async (id: string) => {
     try {
@@ -96,6 +101,19 @@ const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
     });
     onClose();
   };
+
+    useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   const handleTabChange = (tab: RequestDetailsModalState['activeTab']) => {
     setModalState(prev => ({ ...prev, activeTab: tab }));
@@ -146,24 +164,75 @@ const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
     });
   };
 
+  // Handle approve action
+  const handleApprove = async () => {
+    if (!user || !requestDetails) return;
+    
+    setIsProcessing(true);
+    try {
+      const success = withdrawalRequestService.approveRequest(
+        requestDetails.id,
+        user.id,
+        `Request approved by ${user.name}`
+      );
+      
+      if (success) {
+        setShowApproveDialog(false);
+        loadRequestDetails(requestDetails.id);
+      } else {
+        console.error('Failed to approve request');
+      }
+    } catch (error) {
+      console.error('Error approving request:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Handle reject action
+  const handleReject = async () => {
+    if (!user || !requestDetails) return;
+    
+    setIsProcessing(true);
+    try {
+      const success = withdrawalRequestService.rejectRequest(
+        requestDetails.id,
+        user.id,
+        `Request rejected by ${user.name}`
+      );
+      
+      if (success) {
+        setShowRejectDialog(false);
+        loadRequestDetails(requestDetails.id);
+      } else {
+        console.error('Failed to reject request');
+      }
+    } catch (error) {
+      console.error('Error rejecting request:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   if (!isOpen || !requestDetails) {
     return null;
   }
 
   return (
     <AnimatePresence>
-      <motion.div
-        className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-start justify-center p-4 pt-8 z-50"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={(e) => {
-          if (e.target === e.currentTarget) {
-            handleClose();
-          }
-        }}
-        style={{ overflow: 'hidden' }}
-      >
+      {isOpen && requestDetails &&  (
+        <motion.div
+          className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-start justify-center p-4 pt-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              handleClose();
+            }
+          }}
+          style={{ overflow: 'hidden' }}
+        >
         <motion.div
           className="bg-white rounded-3xl w-full max-w-7xl max-h-[95vh] overflow-hidden"
           style={{
@@ -226,15 +295,30 @@ const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
                 {requestDetails.status}
               </motion.div>
             </div>
-            <motion.button
+           <motion.button
               onClick={handleClose}
-              className="p-2 rounded-full bg-red-50 hover:bg-red-100 border border-red-200 hover:border-red-300 transition-all duration-200 shadow-sm hover:shadow-md"
-              whileHover={{ scale: 1.1 }}
+              className="relative p-3 rounded-full transition-all duration-300 flex items-center justify-center shadow-lg backdrop-blur-xl border border-white/30"
+              title="Close Modal"
+              whileHover={{ scale: 1.15, rotate: 90 }}
               whileTap={{ scale: 0.9 }}
-              title="Close Details"
+              style={{
+                background: 'linear-gradient(145deg, #f87171, #ef4444)',
+                boxShadow: '0 4px 20px rgba(239, 68, 68, 0.4)',
+                zIndex: 9999,
+                position: 'relative'
+              }}
             >
-              <X className="w-6 h-6 text-red-600 hover:text-red-700" />
+              <X className="w-5 h-5 text-white" style={{ display: 'block', visibility: 'visible' }} />
+              
+              {/* Enhanced close button with better visibility */}
+              <motion.div
+                className="absolute inset-0 rounded-full bg-red-500 opacity-0"
+                whileHover={{ opacity: 0.2 }}
+                transition={{ duration: 0.2 }}
+              />
             </motion.button>
+
+
           </motion.div>
 
           {/* Tab Navigation */}
@@ -248,7 +332,7 @@ const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.3 }}
           >
-            <div className="flex space-x-2 relative">
+            <div className="flex space-x-2 relative overflow-x-auto">
               {[
                 { id: 'overview', label: 'Overview', icon: Eye, color: 'blue' },
                 { id: 'timeline', label: 'Timeline', icon: Activity, color: 'purple' },
@@ -262,7 +346,7 @@ const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
                   <motion.button
                     key={tab.id}
                     onClick={() => handleTabChange(tab.id as any)}
-                    className={`relative flex items-center space-x-2 px-5 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                    className={`relative flex items-center space-x-3 px-6 py-4 rounded-xl font-semibold transition-all duration-300 whitespace-nowrap ${
                       isActive
                         ? 'bg-white text-gray-900 shadow-lg border border-gray-200'
                         : 'text-gray-600 hover:text-gray-900 hover:bg-white/70'
@@ -272,6 +356,7 @@ const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 + index * 0.1, duration: 0.3 }}
+                    style={{ zIndex: 10, position: 'relative' }}
                   >
                     {/* Active indicator */}
                     {isActive && (
@@ -287,15 +372,35 @@ const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
                       />
                     )}
 
-                    <IconComponent className={`w-4 h-4 relative z-10 ${
-                      isActive
-                        ? tab.color === 'blue' ? 'text-blue-600' :
-                          tab.color === 'purple' ? 'text-purple-600' :
-                          tab.color === 'green' ? 'text-green-600' :
-                          'text-orange-600'
-                        : ''
-                    }`} />
-                    <span className="relative z-10">{tab.label}</span>
+                    {/* Enhanced Icon with better visibility */}
+                    <motion.div
+                      className={`w-6 h-6 rounded-lg flex items-center justify-center relative z-10 ${
+                        isActive
+                          ? tab.color === 'blue' ? 'bg-blue-100' :
+                            tab.color === 'purple' ? 'bg-purple-100' :
+                            tab.color === 'green' ? 'bg-green-100' :
+                            'bg-orange-100'
+                          : 'bg-gray-100'
+                      }`}
+                      whileHover={{ scale: 1.1, rotate: 5 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <IconComponent className={`w-4 h-4 ${
+                        isActive
+                          ? tab.color === 'blue' ? 'text-blue-600' :
+                            tab.color === 'purple' ? 'text-purple-600' :
+                            tab.color === 'green' ? 'text-green-600' :
+                            'text-orange-600'
+                          : 'text-gray-500'
+                      }`} />
+                    </motion.div>
+                    
+                    {/* Enhanced Text with better visibility */}
+                    <span className={`relative z-10 text-sm font-semibold ${
+                      isActive ? 'text-gray-900' : 'text-gray-600'
+                    }`}>
+                      {tab.label}
+                    </span>
 
                     {/* Hover glow effect */}
                     <motion.div
@@ -314,73 +419,157 @@ const RequestDetailsModal: React.FC<RequestDetailsModalProps> = ({
             </div>
           </motion.div>
 
-          {/* Content Area */}
-          <div className="flex-1 overflow-y-auto bg-gradient-to-br from-blue-50/30 via-indigo-50/30 to-purple-50/30" style={{ maxHeight: 'calc(95vh - 200px)' }}>
-            {modalState.isLoading ? (
-              <div className="flex items-center justify-center h-64">
-                <motion.div
-                  className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                />
+          {/* Content Area with scrollbar */}
+          <div className="flex-1 relative bg-gradient-to-br from-blue-50/30 via-indigo-50/30 to-purple-50/30">
+            <div
+              className="h-full overflow-y-auto modal-scrollbar"
+              style={{ maxHeight: 'calc(95vh - 280px)', paddingBottom: '100px' }}
+            >
+              {modalState.isLoading ? (
+                <div className="flex flex-col items-center justify-center h-64 space-y-4">
+                  <motion.div
+                    className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  />
+                  <p className="text-sm text-gray-600 font-medium">Loading request details...</p>
+                </div>
+              ) : (
+                <div className="p-6 md:p-8">
+                  {modalState.activeTab === 'overview' && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4 }}
+                      className="space-y-6"
+                    >
+                      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-gray-100">
+                        <EnhancedOverviewSection
+                          request={requestDetails}
+                          onRequestUpdated={() => loadRequestDetails(requestDetails.id)}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {modalState.activeTab === 'timeline' && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4 }}
+                      className="space-y-6"
+                    >
+                      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-gray-100">
+                        <HorizontalTimelineComponent
+                          request={requestDetails}
+                          timeline={requestDetails.timeline}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {modalState.activeTab === 'comments' && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4 }}
+                      className="space-y-6"
+                    >
+                      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-gray-100">
+                        <EnhancedCommentSystem
+                          requestId={requestDetails.id}
+                          comments={requestDetails.comments}
+                          onCommentAdded={() => loadRequestDetails(requestDetails.id)}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {modalState.activeTab === 'documents' && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4 }}
+                      className="space-y-6"
+                    >
+                      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-gray-100">
+                        <EnhancedDocumentsSection
+                          requestId={requestDetails.id}
+                          documents={requestDetails.documents}
+                          onDocumentUploaded={() => loadRequestDetails(requestDetails.id)}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Fixed Action Buttons at Bottom Right */}
+            <motion.div
+              className="absolute bottom-0 right-0 p-6 bg-gradient-to-t from-white via-white/95 to-transparent"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6, duration: 0.4 }}
+            >
+              <div className="flex items-center space-x-4">
+                <motion.button
+                  onClick={() => setShowApproveDialog(true)}
+                  disabled={isProcessing}
+                  className="flex items-center space-x-3 px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.7, duration: 0.3 }}
+                >
+                  <CheckCircle className="w-6 h-6" />
+                  <span className="text-lg">{isProcessing ? 'Processing...' : 'Request Validation'}</span>
+                </motion.button>
+
+                <motion.button
+                  onClick={() => setShowRejectDialog(true)}
+                  disabled={isProcessing}
+                  className="flex items-center space-x-3 px-8 py-4 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-2xl font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.8, duration: 0.3 }}
+                >
+                  <XCircle className="w-6 h-6" />
+                  <span className="text-lg">{isProcessing ? 'Processing...' : 'Cancel'}</span>
+                </motion.button>
               </div>
-            ) : (
-              <div className="p-8">
-                {modalState.activeTab === 'overview' && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4 }}
-                  >
-                    <EnhancedOverviewSection request={requestDetails} />
-                  </motion.div>
-                )}
-
-                {modalState.activeTab === 'timeline' && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4 }}
-                  >
-                    <HorizontalTimelineComponent
-                      request={requestDetails}
-                      timeline={requestDetails.timeline}
-                    />
-                  </motion.div>
-                )}
-
-                {modalState.activeTab === 'comments' && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4 }}
-                  >
-                    <EnhancedCommentSystem
-                      requestId={requestDetails.id}
-                      comments={requestDetails.comments}
-                      onCommentAdded={() => loadRequestDetails(requestDetails.id)}
-                    />
-                  </motion.div>
-                )}
-
-                {modalState.activeTab === 'documents' && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4 }}
-                  >
-                    <EnhancedDocumentsSection
-                      requestId={requestDetails.id}
-                      documents={requestDetails.documents}
-                      onDocumentUploaded={() => loadRequestDetails(requestDetails.id)}
-                    />
-                  </motion.div>
-                )}
-              </div>
-            )}
+            </motion.div>
           </div>
+
+          {/* Request Validation Confirmation Dialog */}
+          <ConfirmDialog
+            isOpen={showApproveDialog}
+            title="Request Validation"
+            message={`Are you sure you want to validate this withdrawal request for ${formatCurrency(requestDetails.amount, requestDetails.currency)}? This will approve the request and move it to the next stage.`}
+            confirmText="Validate"
+            cancelText="Cancel"
+            variant="info"
+            onConfirm={handleApprove}
+            onCancel={() => setShowApproveDialog(false)}
+          />
+
+          {/* Cancel Request Confirmation Dialog */}
+          <ConfirmDialog
+            isOpen={showRejectDialog}
+            title="Cancel Request"
+            message={`Are you sure you want to cancel this withdrawal request for ${formatCurrency(requestDetails.amount, requestDetails.currency)}? This will reject the request and return it for review.`}
+            confirmText="Cancel Request"
+            cancelText="Keep Request"
+            variant="warning"
+            onConfirm={handleReject}
+            onCancel={() => setShowRejectDialog(false)}
+          />
         </motion.div>
       </motion.div>
+    )}
     </AnimatePresence>
   );
 };
